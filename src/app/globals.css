@@ -1,26 +1,156 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Roboto Mono, Menlo, Monaco, Consolas, libレーションモーノ, DejaVu Sans Mono, monospace;
+  --font-playfair: var(--font-playfair), serif;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --color-background: oklch(0.12 0.02 250);
+  --color-foreground: oklch(0.98 0 0);
+
+  --color-card: oklch(0.15 0.02 250 / 0.8);
+  --color-card-foreground: oklch(0.98 0 0);
+
+  --color-popover: oklch(0.12 0.02 250);
+  --color-popover-foreground: oklch(0.98 0 0);
+
+  --color-primary: oklch(0.6 0.25 280);
+  --color-primary-foreground: oklch(0.98 0 0);
+
+  --color-secondary: oklch(0.2 0.02 250);
+  --color-secondary-foreground: oklch(0.98 0 0);
+
+  --color-muted: oklch(0.2 0.02 250);
+  --color-muted-foreground: oklch(0.6 0.02 250);
+
+  --color-accent: oklch(0.6 0.25 280 / 0.1);
+  --color-accent-foreground: oklch(0.98 0 0);
+
+  --color-destructive: oklch(0.5 0.2 25);
+  --color-destructive-foreground: oklch(0.98 0 0);
+
+  --color-border: oklch(0.25 0.02 250);
+  --color-input: oklch(0.25 0.02 250);
+  --color-ring: oklch(0.6 0.25 280);
+
+  /* Icon Color Palette (Master Rebuild) */
+  --relaxation: #60a5fa;
+  /* Blue */
+  --social: #34d399;
+  /* Green */
+  --outdoor: #facc15;
+  /* Yellow */
+  --sports: #f87171;
+  /* Red */
+  --events: #a78bfa;
+  /* Purple */
+  --budget: #fb923c;
+  /* Orange */
+  --traveling: #fb923c;
+  /* Orange */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  * {
+    @apply border-border/40 outline-ring/50;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    @apply text-foreground selection:bg-primary/30 min-h-screen bg-slate-950;
+    /* Fixed Gradient Background */
+    background: linear-gradient(to bottom right, #020617, #0f172a, #000000);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-serif {
+    font-family: var(--font-playfair), serif;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+
+  /* Unified Glassmorphism Component */
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
+  }
+
+  /* Subtle Radial Glow for Top-Right */
+  .radial-glow {
+    @apply fixed top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none z-[-1];
+    background: radial-gradient(circle at center, rgba(96, 165, 250, 0.08), transparent 70%);
+  }
+
+  /* Starfield (Optional but kept as ambient layer if desired, or can be removed) */
+  .starfield {
+    @apply fixed inset-0 z-[-2] pointer-events-none opacity-20;
+    background-image:
+      radial-gradient(1px 1px at 20px 30px, #fff, rgba(0, 0, 0, 0)),
+      radial-gradient(1px 1px at 40px 70px, #fff, rgba(0, 0, 0, 0)),
+      radial-gradient(1px 1px at 50px 160px, #fff, rgba(0, 0, 0, 0));
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+
+  .text-relaxation {
+    color: var(--relaxation);
+  }
+
+  .text-social {
+    color: var(--social);
+  }
+
+  .text-outdoor {
+    color: var(--outdoor);
+  }
+
+  .text-sports {
+    color: var(--sports);
+  }
+
+  .text-events {
+    color: var(--events);
+  }
+
+  .text-budget {
+    color: var(--budget);
+  }
+
+  .text-traveling {
+    color: var(--traveling);
+  }
+
+  .bg-relaxation {
+    background-color: var(--relaxation);
+  }
+
+  .bg-social {
+    background-color: var(--social);
+  }
+
+  .bg-outdoor {
+    background-color: var(--outdoor);
+  }
+
+  .bg-sports {
+    background-color: var(--sports);
+  }
+
+  .bg-events {
+    background-color: var(--events);
+  }
+
+  .bg-budget {
+    background-color: var(--budget);
+  }
+
+  .bg-traveling {
+    background-color: var(--traveling);
+  }
 }
