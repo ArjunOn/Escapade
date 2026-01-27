@@ -6,38 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Zap, ArrowRight } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/lib/store';
 
-export default function SignupPage() {
+export default function LoginPage() {
     const router = useRouter();
-    const signup = useAppStore(state => state.signup);
+    const login = useAppStore(state => state.login);
     const [isLoading, setIsLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-    });
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-    const handleSignup = (e: React.FormEvent) => {
+    const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        setError('');
 
         setTimeout(() => {
-            signup({
-                name: formData.name,
-                email: formData.email,
-                password: formData.password,
-                preferences: [],
-                vibes: [],
-                budgetTier: 'moderate',
-                location: '',
-                onboardingCompleted: false
-            });
-            router.push('/onboarding');
-        }, 1200);
+            const success = login(email, password);
+            if (success) {
+                router.push('/');
+            } else {
+                setError('Invalid credentials. Access denied.');
+                setIsLoading(false);
+            }
+        }, 1000);
     };
 
     return (
@@ -50,29 +45,17 @@ export default function SignupPage() {
             >
                 <div className="flex justify-center mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                        <Zap className="w-6 h-6 text-white" />
+                        <Lock className="w-6 h-6 text-white" />
                     </div>
                 </div>
 
                 <Card className="glass border-white/5 shadow-2xl overflow-hidden">
                     <CardHeader className="space-y-1 text-center pb-8 border-b border-white/5">
-                        <CardTitle className="text-3xl font-serif italic tracking-tight text-white">Join the Escapade</CardTitle>
-                        <CardDescription className="text-white/40 font-medium">Create your credentials to begin the journey.</CardDescription>
+                        <CardTitle className="text-3xl font-serif italic tracking-tight text-white">Personnel Access</CardTitle>
+                        <CardDescription className="text-white/40 font-medium">Verify credentials for Mission Control entry.</CardDescription>
                     </CardHeader>
-                    <form onSubmit={handleSignup}>
+                    <form onSubmit={handleLogin}>
                         <CardContent className="space-y-4 pt-8">
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className="text-white/60 font-bold uppercase tracking-widest text-[10px]">Full Name</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="Mission Commander"
-                                    type="text"
-                                    required
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
-                                />
-                            </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email" className="text-white/60 font-bold uppercase tracking-widest text-[10px]">Email Address</Label>
                                 <Input
@@ -80,8 +63,8 @@ export default function SignupPage() {
                                     placeholder="commander@escapade.net"
                                     type="email"
                                     required
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
                                     className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
                                 />
                             </div>
@@ -91,25 +74,30 @@ export default function SignupPage() {
                                     id="password"
                                     type="password"
                                     required
-                                    value={formData.password}
-                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
                                     className="bg-white/5 border-white/10 text-white h-11"
                                 />
                             </div>
+
+                            {error && (
+                                <p className="text-[10px] font-bold uppercase text-red-400 tracking-widest text-center">{error}</p>
+                            )}
+
                             <Button className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-xs mt-4" disabled={isLoading}>
-                                {isLoading ? "Synchronizing..." : "Create Account"}
+                                {isLoading ? "Authenticating..." : "Establish Uplink"}
                                 {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
                             </Button>
                         </CardContent>
                     </form>
                     <CardFooter className="flex flex-col space-y-4 pb-8 border-t border-white/5 mt-4">
                         <div className="relative w-full text-center">
-                            <span className="bg-transparent px-2 text-[10px] text-white/30 uppercase font-bold tracking-[0.3em]">Access Restricted</span>
+                            <span className="bg-transparent px-2 text-[10px] text-white/30 uppercase font-bold tracking-[0.3em]">Credentials Required</span>
                         </div>
                         <p className="text-xs text-center text-white/40">
-                            Already a member?{' '}
-                            <Link href="/login" className="text-primary hover:text-primary/80 font-bold underline underline-offset-4">
-                                Log in
+                            New personnel?{' '}
+                            <Link href="/signup" className="text-primary hover:text-primary/80 font-bold underline underline-offset-4">
+                                Sign up
                             </Link>
                         </p>
                     </CardFooter>

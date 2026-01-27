@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     Home, Calendar, Compass, Wallet,
     BookOpen, LayoutGrid, Zap, User,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/lib/store';
 
 const navItems = [
@@ -22,7 +23,15 @@ const navItems = [
 
 export function Header() {
     const pathname = usePathname();
-    const userProfile = useAppStore((state) => state.userProfile);
+    const router = useRouter();
+    const { userProfile, logout, currentUserEmail } = useAppStore();
+
+    const handleLogout = () => {
+        logout();
+        router.push('/login');
+    };
+
+    if (!currentUserEmail) return null;
 
     return (
         <header className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-5xl h-16 glass z-50 px-8 items-center justify-between shadow-2xl transition-all">
@@ -63,6 +72,15 @@ export function Header() {
                 <Link href="/onboarding" className="w-9 h-9 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all group">
                     <User className="w-5 h-5 text-white/40 group-hover:text-white" />
                 </Link>
+                <div className="h-4 w-px bg-white/10" />
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleLogout}
+                    className="w-9 h-9 rounded-xl text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                >
+                    <LogOut className="w-4 h-4" />
+                </Button>
             </div>
         </header>
     );
@@ -70,6 +88,10 @@ export function Header() {
 
 export function BottomNav() {
     const pathname = usePathname();
+    const router = useRouter();
+    const { logout, currentUserEmail } = useAppStore();
+
+    if (!currentUserEmail) return null;
 
     return (
         <nav className="md:hidden fixed bottom-6 left-4 right-4 h-16 glass z-50 border-white/10 overflow-hidden px-2 shadow-2xl">
@@ -92,6 +114,12 @@ export function BottomNav() {
                         </Link>
                     )
                 })}
+                <button
+                    onClick={() => { logout(); router.push('/login'); }}
+                    className="flex-1 flex flex-col items-center justify-center p-2 text-white/20 hover:text-red-400"
+                >
+                    <LogOut className="w-5 h-5" />
+                </button>
             </div>
         </nav>
     );

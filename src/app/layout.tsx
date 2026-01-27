@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { RouteGuard } from "@/components/layout/RouteGuard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,12 +39,14 @@ export default function RootLayout({
         <div className="radial-glow" />
         <div className="starfield" />
 
-        {/* Navigation is currently handled by Navbar which I'll overhaul next */}
-        <Navbar />
+        <RouteGuard>
+          {/* Navigation is currently handled by Navbar which I'll overhaul next */}
+          <Navbar />
 
-        <main className="container mx-auto px-4 py-4 pt-24 md:py-8 md:pt-32 max-w-5xl relative z-10 pb-24 md:pb-8 lg:pl-0">
-          {children}
-        </main>
+          <main className="container mx-auto px-4 py-4 pt-24 md:py-8 md:pt-32 max-w-5xl relative z-10 pb-24 md:pb-8 lg:pl-0">
+            {children}
+          </main>
+        </RouteGuard>
       </body>
     </html>
   );

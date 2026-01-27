@@ -2,9 +2,10 @@ export type Category = 'Relaxation' | 'Social' | 'Outdoor' | 'Sports' | 'Events'
 
 export interface UserProfile {
   name: string;
-  email?: string;
-  preferences: string[]; // "Concerts", "Hiking", etc.
-  vibes: string[]; // "High Energy", "Relaxation", etc.
+  email: string;
+  password?: string; // Stored locally for simulation
+  preferences: string[];
+  vibes: string[];
   budgetTier: 'frugal' | 'moderate' | 'luxury';
   location: string;
   onboardingCompleted: boolean;
@@ -45,7 +46,20 @@ export interface JournalEntry {
   tags: string[];
 }
 
+export interface UserData {
+  activities: Activity[];
+  expenses: Expense[];
+  journalEntries: JournalEntry[];
+  weeklySavingsGoal: number;
+  userProfile: UserProfile;
+}
+
 export interface AppState {
+  // Global Session State
+  currentUserEmail: string | null;
+  accounts: Record<string, UserData>; // Keyed by email
+
+  // Computed/Active State (mirrors current user data for accessibility)
   activities: Activity[];
   expenses: Expense[];
   journalEntries: JournalEntry[];
@@ -53,6 +67,10 @@ export interface AppState {
   userProfile: UserProfile | null;
 
   // Actions
+  signup: (profile: UserProfile) => void;
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
+
   addActivity: (activity: Activity) => void;
   removeActivity: (id: string) => void;
   toggleActivity: (id: string) => void;
