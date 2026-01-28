@@ -14,6 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { LoginModal } from '@/components/features/auth/LoginModal';
+import { MOCK_EVENTS, DiscoveryEvent } from '@/lib/data';
+import { Badge } from "@/components/ui/badge";
 
 // Helper for countdown
 const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
@@ -58,12 +62,29 @@ const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
 };
 
 export default function Dashboard() {
-  const { userProfile, expenses, weeklySavingsGoal, activities, setWeeklySavingsGoal } = useAppStore();
-  const router = require('next/navigation').useRouter();
+  const {
+    userProfile,
+    currentUserEmail,
+    expenses,
+    weeklySavingsGoal,
+    activities,
+    setWeeklySavingsGoal,
+    initializeEvent,
+    initializedEventIds,
+    syncStore
+  } = useAppStore();
+  const router = useRouter();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentUserEmail) {
+      syncStore();
+    }
+  }, [currentUserEmail, syncStore]);
 
   // Goal edit state
   const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState(weeklySavingsGoal.toString());
+  const [goalInput, setGoalInput] = useState(weeklySavingsGoal?.toString() || "0");
 
   // Redirect to onboarding if not completed
   useEffect(() => {
@@ -93,6 +114,28 @@ export default function Dashboard() {
   const savingsProgress = Math.min((totalSpentThisWeek / (weeklySavingsGoal || 1)) * 100, 100);
   const savingsRemaining = Math.max((weeklySavingsGoal || 0) - totalSpentThisWeek, 0);
 
+  const curatedEvents = useMemo(() => {
+    if (!userProfile) return [];
+    return MOCK_EVENTS.map(event => {
+      const matchScore = event.tags.filter(t => userProfile.preferences.includes(t)).length;
+      const vibeScore = event.vibes.filter(v => userProfile.vibes.includes(v)).length;
+      const isInitialized = activities.some(a => a.originalEventId === event.id);
+      return {
+        ...event,
+        priority: matchScore + vibeScore,
+        isInitialized
+      };
+    }).sort((a, b) => b.priority - a.priority).slice(0, 2);
+  }, [userProfile, initializedEventIds]);
+
+  const trendingEvents = useMemo(() => {
+    return MOCK_EVENTS.filter(e => !curatedEvents.some(ce => ce.id === e.id))
+      .map(event => ({
+        ...event,
+        isInitialized: activities.some(a => a.originalEventId === event.id)
+      })).slice(0, 3);
+  }, [curatedEvents, activities]);
+
   const saveGoal = () => {
     const val = parseFloat(goalInput);
     if (!isNaN(val)) {
@@ -100,6 +143,78 @@ export default function Dashboard() {
       setIsEditingGoal(false);
     }
   };
+
+  if (!currentUserEmail) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-12 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6 max-w-2xl"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
+            <Sparkles className="w-4 h-4" />
+            Your Weekend, Engineered
+          </div>
+          <h1 className="text-5xl md:text-7xl font-serif italic text-white tracking-tight leading-tight">
+            Escape the <span className="text-primary">Ordinary.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-white/40 font-medium leading-relaxed px-4">
+            Escapade is your intelligent mission control for weekend adventures.
+            Plan, discover, and budget your escapes with precision.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col sm:flex-row gap-4 items-center"
+        >
+          <Link href="/signup">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-xs h-14 px-10 rounded-2xl shadow-2xl shadow-primary/20 group">
+              Get Started <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => setIsLoginModalOpen(true)}
+            className="border-white/10 hover:bg-white/5 text-white font-bold uppercase tracking-widest text-xs h-14 px-10 rounded-2xl"
+          >
+            Personnel Sign In
+          </Button>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-12 border-t border-white/5 pt-12">
+          {[
+            { icon: Target, title: "Precision Planning", desc: "Military-grade logistics for your leisure time." },
+            { icon: Wallet, title: "Budget Intelligence", desc: "Maximize your fun per dollar with smart tracking." },
+            { icon: Compass, title: "Smart Discovery", desc: "Hand-picked experiences tailored to your vibe." }
+          ].map((feature, i) => (
+            <motion.div
+              key={feature.title}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 + (i * 0.1) }}
+              className="space-y-4 p-6"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary mx-auto md:mx-0">
+                <feature.icon className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white">{feature.title}</h3>
+              <p className="text-sm text-white/40 leading-relaxed">{feature.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+        />
+      </div>
+    );
+  }
 
   if (!userProfile) return null;
 
@@ -144,66 +259,65 @@ export default function Dashboard() {
         {/* Primary Column */}
         <div className="md:col-span-8 space-y-8">
           {isSavingMode ? (
-            /* Saving Mode Core UI */
-            <Card className="glass overflow-hidden border-primary/20 bg-primary/5">
-              <CardContent className="p-8 space-y-8">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <h2 className="text-2xl font-serif italic text-white">Escapade Fund</h2>
-                    <p className="text-sm text-white/40">Maintaining target savings for the upcoming weekend.</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-4xl font-bold font-mono text-white">${savingsRemaining.toFixed(0)}</div>
-                    <div className="text-[10px] uppercase font-bold tracking-widest text-primary">Target Remaining</div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-white/60">
-                    <span>Progress to Goal</span>
-                    <span>{savingsProgress.toFixed(0)}%</span>
-                  </div>
-                  <div className="relative h-3 w-full bg-white/5 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${savingsProgress}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                      className="absolute h-full bg-primary shadow-[0_0_20px_rgba(96,165,250,0.5)]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 pt-4">
-                    <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                      <div className="text-[10px] uppercase font-bold text-white/40 mb-1">Spent so far</div>
-                      <div className="text-xl font-bold text-white">${totalSpentThisWeek.toFixed(2)}</div>
-                    </div>
-                    <div className="bg-white/5 rounded-xl p-4 border border-white/5 group relative cursor-pointer" onClick={() => !isEditingGoal && setIsEditingGoal(true)}>
-                      <div className="text-[10px] uppercase font-bold text-white/40 mb-1 flex items-center gap-1">
-                        Weekly Goal
-                        {!isEditingGoal && <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                      </div>
-                      {isEditingGoal ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={goalInput}
-                            onChange={(e) => setGoalInput(e.target.value)}
-                            className="h-8 w-full bg-white/10 border-white/20 text-white text-lg font-bold p-1"
-                            autoFocus
-                            onBlur={saveGoal}
-                            onKeyDown={(e) => e.key === 'Enter' && saveGoal()}
-                          />
-                          <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-400" onClick={saveGoal}>
-                            <Check className="w-4 h-4" />
-                          </Button>
+            /* Discovery Showcase */
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-serif italic text-white underline decoration-primary/30 underline-offset-8">Top Matched Escapades</h2>
+                <Link href="/discovery" className="text-[10px] font-bold text-primary flex items-center gap-2 group tracking-widest uppercase">
+                  EXPLORE ALL <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {curatedEvents.map((event) => (
+                  <Card key={event.id} className="glass border-white/5 hover:border-primary/20 transition-all overflow-hidden relative group">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                          {event.icon}
                         </div>
-                      ) : (
-                        <div className="text-xl font-bold text-white">${weeklySavingsGoal.toFixed(0)}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                        <Badge variant="outline" className="border-primary/20 text-primary text-[8px] font-bold uppercase tracking-widest">
+                          {event.priority > 2 ? 'Elite Match' : 'Recommended'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-lg font-bold text-white leading-tight">{event.title}</h4>
+                        <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                          <Compass className="w-3 h-3" /> {event.location}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                        <div className="text-lg font-bold text-white">${event.cost}</div>
+                        <Button
+                          size="sm"
+                          disabled={event.isInitialized}
+                          onClick={() => !event.isInitialized && initializeEvent({
+                            id: event.id,
+                            title: event.title,
+                            category: event.category as any,
+                            cost: event.cost,
+                            date: event.date,
+                            time: event.time,
+                            location: event.location
+                          })}
+                          className={cn(
+                            "h-8 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                            event.isInitialized
+                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default"
+                              : "bg-primary hover:bg-primary/90 text-white"
+                          )}
+                        >
+                          {event.isInitialized ? (
+                            <span className="flex items-center gap-2">
+                              <Check className="w-3 h-3" /> Ready
+                            </span>
+                          ) : "Initialize"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ) : (
             /* Adventure Mode Core UI */
             <div className="space-y-6">
@@ -251,76 +365,100 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Discovery / Spending Insights */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-serif italic text-white">
-                {isSavingMode ? "Expense Intelligence" : "Recommended Escapades"}
-              </h2>
-              <Link href={isSavingMode ? "/budget" : "/discovery"} className="text-xs font-bold text-primary flex items-center gap-2 group">
-                VIEW INTEL <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {isSavingMode ? (
-                <>
-                  <Card className="glass border-white/10 hover:border-primary/30 transition-all cursor-pointer group">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-orange-400/20 flex items-center justify-center text-orange-400">
-                          <TrendingUp className="w-4 h-4" />
-                        </div>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/60">Spending Streak</span>
+          {/* Discovery / Showcase Sections */}
+          <div className="space-y-12">
+            {/* Top Matched (already there) */}
+
+            {/* Trending Section */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-serif italic text-white underline decoration-emerald-500/30 underline-offset-8">Trending Expeditions</h2>
+                <div className="text-[10px] font-bold text-emerald-400 flex items-center gap-2 tracking-widest uppercase">
+                  <Zap className="w-3 h-3" /> High Interaction
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                {trendingEvents.map((event) => (
+                  <Card key={event.id} className="glass border-white/5 hover:border-emerald-500/20 transition-all overflow-hidden relative group">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div className="text-xl">{event.icon}</div>
+                        <div className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{event.category}</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">Optimized</div>
-                      <p className="text-xs text-white/40 leading-relaxed">You're spending 15% less than last week. Escapade fund growing.</p>
+                      <h4 className="font-bold text-white text-sm leading-tight line-clamp-1">{event.title}</h4>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                        <div className="text-sm font-bold text-white/60">${event.cost}</div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={event.isInitialized}
+                          onClick={() => !event.isInitialized && initializeEvent({
+                            id: event.id,
+                            title: event.title,
+                            category: event.category as any,
+                            cost: event.cost,
+                            date: event.date,
+                            time: event.time,
+                            location: event.location
+                          })}
+                          className={cn(
+                            "h-7 px-3 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all",
+                            event.isInitialized
+                              ? "text-emerald-400 bg-emerald-400/10"
+                              : "text-primary hover:bg-primary/10"
+                          )}
+                        >
+                          {event.isInitialized ? <Check className="w-3 h-3" /> : "Add"}
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
-                  <Card className="glass border-white/10 hover:border-primary/30 transition-all cursor-pointer group">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-400/20 flex items-center justify-center text-emerald-400">
-                          <Target className="w-4 h-4" />
-                        </div>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/60">Financial Alert</span>
-                      </div>
-                      <div className="text-2xl font-bold text-white">Restricted</div>
-                      <p className="text-xs text-white/40 leading-relaxed">Consider skipping non-essential logistics to hit your $400 goal.</p>
-                    </CardContent>
-                  </Card>
-                </>
-              ) : (
-                <>
-                  <Card className="glass border-white/10 hover:border-primary/30 transition-all cursor-pointer group overflow-hidden">
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <Badge className="bg-primary/20 text-primary hover:bg-primary/20 text-[8px] font-bold uppercase tracking-widest border-none">Matched for You</Badge>
-                      </div>
-                      <div className="text-xl font-bold text-white">Morning Hiking Excursion</div>
-                      <div className="flex items-center gap-2 text-xs text-white/40">
-                        <Compass className="w-3 h-3" /> Eagle Peak Lookout
-                      </div>
-                    </div>
-                  </Card>
-                  <Card className="glass border-white/10 hover:border-primary/30 transition-all cursor-pointer group overflow-hidden">
-                    <div className="p-6 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <Badge className="bg-primary/20 text-primary hover:bg-primary/20 text-[8px] font-bold uppercase tracking-widest border-none">Budget Approved</Badge>
-                      </div>
-                      <div className="text-xl font-bold text-white">Jazz Night at Studio B</div>
-                      <div className="flex items-center gap-2 text-xs text-white/40">
-                        <Clock className="w-3 h-3" /> 20:00 - Friday
-                      </div>
-                    </div>
-                  </Card>
-                </>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sidebar Column (Quick Actions / Stats) */}
         <div className="md:col-span-4 space-y-8">
+          {isSavingMode && (
+            <section className="space-y-6">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Escapade Fund</h3>
+              <Card className="glass border-primary/20 bg-primary/5 overflow-hidden">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex justify-between items-end">
+                    <div className="space-y-1">
+                      <div className="text-[10px] uppercase font-bold tracking-widest text-primary">Target Remaining</div>
+                      <div className="text-3xl font-bold font-mono text-white">${savingsRemaining.toFixed(0)}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] uppercase font-bold tracking-widest text-white/40">Goal</div>
+                      <div className="text-lg font-bold text-white">${weeklySavingsGoal.toFixed(0)}</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-white/40">
+                      <span>Progress</span>
+                      <span>{savingsProgress.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${savingsProgress}%` }}
+                        className="h-full bg-primary"
+                      />
+                    </div>
+                  </div>
+                  <Link href="/budget">
+                    <Button variant="ghost" size="sm" className="w-full mt-2 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 h-8">
+                      Manage Budget <ArrowRight className="w-3 h-3 ml-2" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
           <section className="space-y-6">
             <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Logistics Control</h3>
             <div className="grid grid-cols-1 gap-3">
@@ -366,14 +504,3 @@ export default function Dashboard() {
   );
 }
 
-function Badge({ children, className, variant = "default" }: { children: React.ReactNode, className?: string, variant?: "default" | "outline" }) {
-  return (
-    <span className={cn(
-      "px-2 py-0.5 rounded-full text-xs transition-colors",
-      variant === "outline" ? "border border-white/10" : "bg-primary text-white",
-      className
-    )}>
-      {children}
-    </span>
-  )
-}

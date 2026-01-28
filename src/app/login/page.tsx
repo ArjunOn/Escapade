@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,18 @@ import { useAppStore } from '@/lib/store';
 
 export default function LoginPage() {
     const router = useRouter();
-    const login = useAppStore(state => state.login);
+    const { login, currentUserEmail } = useAppStore();
     const [isLoading, setIsLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (currentUserEmail) {
+            router.push('/');
+        }
+    }, [currentUserEmail, router]);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,8 +42,10 @@ export default function LoginPage() {
         }, 1000);
     };
 
+    if (currentUserEmail) return null;
+
     return (
-        <div className="min-h-screen flex items-center justify-center py-12 px-4 relative">
+        <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 relative">
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}

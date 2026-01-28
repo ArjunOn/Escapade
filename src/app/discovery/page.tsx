@@ -5,24 +5,17 @@ import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/lib/store';
-import { Sparkles, MapPin, Calendar, Clock, Search, Radar, Star } from 'lucide-react';
+import { Sparkles, MapPin, Calendar, Clock, Search, Radar, Star, Check } from 'lucide-react';
 import { Input } from "@/components/ui/input";
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Mock data (Discovery)
-const mockEvents = [
-    { id: '1', title: 'Jazz in the Park', category: 'Events', icon: '🎷', cost: 20, vibes: ['Culture', 'Relaxation'], tags: ['Jazz', 'Live Music', 'Concerts'], location: 'Central Park', time: '19:00', date: '2024-05-24' },
-    { id: '2', title: 'Morning Yoga', category: 'Relaxation', icon: '🧘', cost: 0, vibes: ['Relaxation', 'Wellness'], tags: ['Yoga', 'Wellness', 'Morning'], location: 'Studio B', time: '08:00', date: '2024-05-25' },
-    { id: '3', title: 'Beach Volleyball', category: 'Sports', icon: '🏐', cost: 0, vibes: ['Sports', 'Social'], tags: ['Sports', 'Social', 'Beach'], location: 'North Beach', time: '10:00', date: '2024-05-25' },
-    { id: '4', title: 'Arcade Night', category: 'Social', icon: '🕹️', cost: 15, vibes: ['Social'], tags: ['Gaming', 'Fun', 'Nightlife'], location: 'Retro Games', time: '20:00', date: '2024-05-24' },
-    { id: '5', title: 'Gourmet Food Tour', category: 'Social', icon: 'Social', cost: 45, vibes: ['Social'], tags: ['Fine Dining', 'Cooking', 'Nightlife'], location: 'Downtown', time: '12:00', date: '2024-05-25' },
-    { id: '6', title: 'Mountain Hike', category: 'Outdoor', icon: '🥾', cost: 0, vibes: ['Outdoor'], tags: ['Hiking', 'Nature', 'Photography'], location: 'Eagle Peak', time: '07:00', date: '2024-05-26' },
-];
+import { MOCK_EVENTS, DiscoveryEvent } from '@/lib/data';
 
 function DiscoveryContent() {
     const searchParams = useSearchParams();
-    const { userProfile, activities, addActivity } = useAppStore();
+    const { userProfile, activities, addActivity, initializeEvent, initializedEventIds } = useAppStore();
     const initialCategory = searchParams.get('category') || 'All';
     const [selectedCategory, setSelectedCategory] = useState(initialCategory);
     const [searchQuery, setSearchQuery] = useState('');
@@ -30,43 +23,43 @@ function DiscoveryContent() {
     const categories = ['All', 'Relaxation', 'Social', 'Outdoor', 'Sports', 'Events', 'Traveling'];
 
     const filteredEvents = useMemo(() => {
-        let results = mockEvents;
+        let results = MOCK_EVENTS;
 
         if (selectedCategory !== 'All') {
-            results = results.filter(e => e.category === selectedCategory);
+            results = results.filter((e: DiscoveryEvent) => e.category === selectedCategory);
         }
 
         if (searchQuery) {
-            results = results.filter(e =>
+            results = results.filter((e: DiscoveryEvent) =>
                 e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                e.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+                e.tags.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()))
             );
         }
 
         // Add matching logic
-        return results.map(event => {
-            const matchScore = event.tags.filter(t => userProfile?.preferences.includes(t)).length;
-            const vibeScore = event.vibes.filter(v => userProfile?.vibes.includes(v)).length;
+        return results.map((event: DiscoveryEvent) => {
+            const matchScore = event.tags.filter((t: string) => userProfile?.preferences.includes(t)).length;
+            const vibeScore = event.vibes.filter((v: string) => userProfile?.vibes.includes(v)).length;
+            const isInitialized = activities.some(a => a.originalEventId === event.id);
             return {
                 ...event,
                 isMatched: matchScore > 0 || vibeScore > 0,
-                priority: matchScore + vibeScore
+                priority: matchScore + vibeScore,
+                isInitialized
             };
-        }).sort((a, b) => b.priority - a.priority);
+        }).sort((a: any, b: any) => b.priority - a.priority);
 
-    }, [selectedCategory, searchQuery, userProfile]);
+    }, [selectedCategory, searchQuery, userProfile, initializedEventIds]);
 
-    const handleQuickAdd = (event: typeof mockEvents[0]) => {
-        addActivity({
-            id: crypto.randomUUID(),
+    const handleQuickAdd = (event: DiscoveryEvent) => {
+        initializeEvent({
+            id: event.id,
             title: event.title,
             category: event.category as any,
-            date: event.date,
-            startTime: event.time,
             cost: event.cost,
-            completed: false,
-            location: event.location,
-            matched: true
+            date: event.date,
+            time: event.time,
+            location: event.location
         });
     };
 
@@ -154,10 +147,20 @@ function DiscoveryContent() {
                                         <div className="text-xl font-bold text-white">${event.cost}</div>
                                         <Button
                                             size="sm"
-                                            onClick={() => handleQuickAdd(event)}
-                                            className="bg-white/5 hover:bg-primary transition-all text-white border-none h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest"
+                                            onClick={() => !event.isInitialized && handleQuickAdd(event)}
+                                            disabled={event.isInitialized}
+                                            className={cn(
+                                                "transition-all h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-widest",
+                                                event.isInitialized
+                                                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default"
+                                                    : "bg-white/5 hover:bg-primary text-white border-none"
+                                            )}
                                         >
-                                            Initialize
+                                            {event.isInitialized ? (
+                                                <span className="flex items-center gap-2">
+                                                    <Check className="w-3 h-3" /> Initialized
+                                                </span>
+                                            ) : "Initialize"}
                                         </Button>
                                     </div>
                                 </CardContent>

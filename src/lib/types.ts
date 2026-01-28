@@ -22,6 +22,8 @@ export interface Activity {
   completed: boolean;
   location?: string;
   matched?: boolean; // New: Matched for You badge
+  originalEventId?: string; // ID of the source discovery event
+  expenseId?: string; // ID of the associated expense
 }
 
 export interface Expense {
@@ -46,12 +48,23 @@ export interface JournalEntry {
   tags: string[];
 }
 
+export interface MissionHistory {
+  id: string;
+  weekLabel: string; // e.g., "Week of May 20"
+  totalSpent: number;
+  savingsGoal: number;
+  activitiesCount: number;
+  date: string; // ISO Date for sorting
+}
+
 export interface UserData {
   activities: Activity[];
   expenses: Expense[];
   journalEntries: JournalEntry[];
   weeklySavingsGoal: number;
   userProfile: UserProfile;
+  history: MissionHistory[];
+  initializedEventIds: string[];
 }
 
 export interface AppState {
@@ -65,6 +78,8 @@ export interface AppState {
   journalEntries: JournalEntry[];
   weeklySavingsGoal: number;
   userProfile: UserProfile | null;
+  history: MissionHistory[];
+  initializedEventIds: string[];
 
   // Actions
   signup: (profile: UserProfile) => void;
@@ -84,4 +99,9 @@ export interface AppState {
 
   addJournalEntry: (entry: JournalEntry) => void;
   resetStore: () => void;
+
+  // New Actions
+  initializeEvent: (event: { title: string, category: Category, cost: number, date: string, time: string, location: string, id: string }) => void;
+  completeMission: () => void;
+  syncStore: () => void;
 }

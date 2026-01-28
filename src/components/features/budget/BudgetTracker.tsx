@@ -13,14 +13,14 @@ import {
 import {
     Trash2, Edit2, Plus, Wallet,
     TrendingUp, ArrowDownRight, Tag,
-    Save, X, Check
+    Save, X, Check, Rocket, Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Category, Expense } from '@/lib/types';
 
 export function BudgetTracker({ compact = false }: { compact?: boolean }) {
-    const { expenses, weeklySavingsGoal, addExpense, removeExpense, editExpense, setWeeklySavingsGoal } = useAppStore();
+    const { expenses, weeklySavingsGoal, addExpense, removeExpense, editExpense, setWeeklySavingsGoal, history } = useAppStore();
 
     // Form state
     const [amount, setAmount] = useState('');
@@ -297,6 +297,53 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                     </div>
                 </CardContent>
             </Card>
+            {/* Mission History */}
+            {history && history.length > 0 && (
+                <div className="space-y-6 pt-12 border-t border-white/5">
+                    <div className="space-y-1">
+                        <h3 className="text-2xl font-serif italic text-white tracking-tight">Mission Archive</h3>
+                        <p className="text-white/40 text-sm font-medium">Post-operation analysis of previous deployment windows.</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {history.map((mission) => (
+                            <Card key={mission.id} className="glass border-white/5 hover:border-primary/20 transition-all group">
+                                <CardHeader className="p-6 pb-2">
+                                    <div className="flex justify-between items-start">
+                                        <CardTitle className="text-lg font-serif italic text-white group-hover:text-primary transition-colors">
+                                            {mission.weekLabel}
+                                        </CardTitle>
+                                        <div className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                                            {new Date(mission.date).getFullYear()}
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-6 pt-0 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-[8px] uppercase font-bold tracking-widest text-white/40 mb-1">Total Spent</div>
+                                            <div className="text-xl font-bold text-white">${mission.totalSpent}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[8px] uppercase font-bold tracking-widest text-white/40 mb-1">Savings Goal</div>
+                                            <div className="text-xl font-bold text-white">${mission.savingsGoal}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-4 border-t border-white/5">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                                            <Rocket className="w-3 h-3 text-primary" /> {mission.activitiesCount} Missions
+                                        </div>
+                                        <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${mission.totalSpent <= mission.savingsGoal ? 'text-emerald-400' : 'text-red-400'
+                                            }`}>
+                                            <Target className="w-3 h-3" />
+                                            {mission.totalSpent <= mission.savingsGoal ? 'Clearance' : 'Overrun'}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -26,7 +26,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export default function PlannerPage() {
-    const { activities, addActivity, removeActivity, toggleActivity } = useAppStore();
+    const { activities, addActivity, removeActivity, toggleActivity, completeMission } = useAppStore();
 
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState<Category>('Social');
@@ -120,7 +120,19 @@ export default function PlannerPage() {
 
                 {/* Operations Manifest */}
                 <div className="lg:col-span-12 space-y-6">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Active Manifest</h2>
+                    <div className="flex items-center justify-between px-2">
+                        <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">Active Manifest</h2>
+                        {activities.length > 0 && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={completeMission}
+                                className="border-primary/20 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest rounded-xl h-8 px-4"
+                            >
+                                Archive Mission
+                            </Button>
+                        )}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <AnimatePresence>
                             {activities.length > 0 ? activities.map(act => {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 
-const PUBLIC_ROUTES = ['/login', '/signup'];
+const PUBLIC_ROUTES = ['/login', '/signup', '/'];
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -19,7 +19,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
             if (!currentUserEmail && !isPublicRoute) {
                 router.push('/login');
                 setIsAuthorized(false);
-            } else if (currentUserEmail && isPublicRoute) {
+            } else if (currentUserEmail && (pathname === '/login' || pathname === '/signup')) {
                 router.push('/');
                 setIsAuthorized(true);
             } else {

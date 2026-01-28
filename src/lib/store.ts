@@ -17,6 +17,8 @@ export const useAppStore = create<AppState>()(
             journalEntries: [],
             weeklySavingsGoal: 0,
             userProfile: null,
+            history: [],
+            initializedEventIds: [],
 
             // Authentication Actions
             signup: (profile: UserProfile) => {
@@ -28,7 +30,9 @@ export const useAppStore = create<AppState>()(
                     expenses: [],
                     journalEntries: [],
                     weeklySavingsGoal: 0,
-                    userProfile: profile
+                    userProfile: profile,
+                    history: [],
+                    initializedEventIds: []
                 };
 
                 set((state) => ({
@@ -45,11 +49,13 @@ export const useAppStore = create<AppState>()(
                 if (user && user.userProfile.password === password) {
                     set({
                         currentUserEmail: email,
-                        activities: user.activities,
-                        expenses: user.expenses,
-                        journalEntries: user.journalEntries,
-                        weeklySavingsGoal: user.weeklySavingsGoal,
-                        userProfile: user.userProfile
+                        activities: user.activities || [],
+                        expenses: user.expenses || [],
+                        journalEntries: user.journalEntries || [],
+                        weeklySavingsGoal: user.weeklySavingsGoal || 0,
+                        userProfile: user.userProfile,
+                        history: user.history || [],
+                        initializedEventIds: user.initializedEventIds || []
                     });
                     return true;
                 }
@@ -63,7 +69,9 @@ export const useAppStore = create<AppState>()(
                     expenses: [],
                     journalEntries: [],
                     weeklySavingsGoal: 0,
-                    userProfile: null
+                    userProfile: null,
+                    history: [],
+                    initializedEventIds: []
                 });
             },
 
@@ -89,12 +97,33 @@ export const useAppStore = create<AppState>()(
                 if (!email) return;
 
                 set((state) => {
+                    const activityToRemove = state.activities.find(a => a.id === id);
+                    if (!activityToRemove) return state;
+
                     const nextActivities = state.activities.filter((a) => a.id !== id);
+
+                    // Revert Discovery Status
+                    const nextIds = activityToRemove.originalEventId
+                        ? state.initializedEventIds.filter(eid => eid !== activityToRemove.originalEventId)
+                        : state.initializedEventIds;
+
+                    // Revert Budget
+                    const nextExpenses = activityToRemove.expenseId
+                        ? state.expenses.filter(exp => exp.id !== activityToRemove.expenseId)
+                        : state.expenses;
+
                     return {
                         activities: nextActivities,
+                        expenses: nextExpenses,
+                        initializedEventIds: nextIds,
                         accounts: {
                             ...state.accounts,
-                            [email]: { ...state.accounts[email], activities: nextActivities }
+                            [email]: {
+                                ...state.accounts[email],
+                                activities: nextActivities,
+                                expenses: nextExpenses,
+                                initializedEventIds: nextIds
+                            }
                         }
                     };
                 });
@@ -222,7 +251,136 @@ export const useAppStore = create<AppState>()(
                     journalEntries: [],
                     weeklySavingsGoal: 0,
                     userProfile: null,
+                    history: [],
+                    initializedEventIds: []
                 })),
+
+            initializeEvent: (event) => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+
+                const expenseId = event.cost > 0 ? crypto.randomUUID() : undefined;
+                const activity: Activity = {
+                    id: crypto.randomUUID(),
+                    title: event.title,
+                    category: event.category,
+                    date: event.date,
+                    startTime: event.time,
+                    cost: event.cost,
+                    completed: false,
+                    location: event.location,
+                    matched: true,
+                    originalEventId: event.id,
+                    expenseId
+                };
+
+                get().addActivity(activity);
+
+                if (expenseId) {
+                    const expense: Expense = {
+                        id: expenseId,
+                        amount: event.cost,
+                        description: `Mission: ${event.title}`,
+                        category: event.category,
+                        date: new Date().toISOString()
+                    };
+
+                    set((state) => {
+                        const nextExpenses = [...state.expenses, expense];
+                        return {
+                            expenses: nextExpenses,
+                            accounts: {
+                                ...state.accounts,
+                                [email]: { ...state.accounts[email], expenses: nextExpenses }
+                            }
+                        };
+                    });
+                }
+
+                set((state) => {
+                    const nextIds = [...(state.initializedEventIds || []), event.id];
+                    return {
+                        initializedEventIds: nextIds,
+                        accounts: {
+                            ...state.accounts,
+                            [email]: { ...state.accounts[email], initializedEventIds: nextIds }
+                        }
+                    };
+                });
+            },
+
+            completeMission: () => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+
+                const state = get();
+                const totalSpent = state.expenses.reduce((s, e) => s + e.amount, 0);
+                const mission = {
+                    id: crypto.randomUUID(),
+                    weekLabel: `Week of ${new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+                    totalSpent,
+                    savingsGoal: state.weeklySavingsGoal,
+                    activitiesCount: state.activities.length,
+                    date: new Date().toISOString()
+                };
+
+                const nextHistory = [mission, ...(state.history || [])];
+
+                set((state) => ({
+                    history: nextHistory,
+                    activities: [],
+                    expenses: [],
+                    journalEntries: [],
+                    initializedEventIds: [],
+                    accounts: {
+                        ...state.accounts,
+                        [email]: {
+                            ...state.accounts[email],
+                            history: nextHistory,
+                            activities: [],
+                            expenses: [],
+                            journalEntries: [],
+                            initializedEventIds: []
+                        }
+                    }
+                }));
+            },
+
+            syncStore: () => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+
+                set((state) => {
+                    // 1. Sync initializedEventIds with current activities
+                    const activeOriginalIds = state.activities.map(a => a.originalEventId).filter(Boolean) as string[];
+                    const nextIds = state.initializedEventIds.filter(id => activeOriginalIds.includes(id));
+
+                    // 2. Sync Expenses (Cleanup orphaned mission expenses)
+                    // Only cleanup expenses that look like missions but have no activity counterpart
+                    const activeMissionTitles = state.activities.map(a => a.title);
+                    const nextExpenses = state.expenses.filter(exp => {
+                        if (exp.description?.startsWith('Mission: ')) {
+                            const missionTitle = exp.description.replace('Mission: ', '');
+                            // If the expense description title isn't in active activities, it's orphaned
+                            return activeMissionTitles.includes(missionTitle);
+                        }
+                        return true;
+                    });
+
+                    return {
+                        initializedEventIds: nextIds,
+                        expenses: nextExpenses,
+                        accounts: {
+                            ...state.accounts,
+                            [email]: {
+                                ...state.accounts[email],
+                                initializedEventIds: nextIds,
+                                expenses: nextExpenses
+                            }
+                        }
+                    };
+                });
+            },
         }),
         {
             name: 'escapade-v2-auth-storage',
