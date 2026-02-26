@@ -1,0 +1,4 @@
+database name:Escapade
+database Password: @rjun532451
+Project URL: https://ziycgmxpcvdblsypgxuo.supabase.co
+Publishable API Key: sb_publishable_E-EerpAEQ2vd-Pc60zyHqA_cNNawIjp

@@ -104,7 +104,90 @@ Escapade is a lifestyle productivity + budget hybrid for weekends. It helps you:
 - **Analytics & logs**:
   - `AiLog` table in Prisma is ready to store prompts/responses for observability and future tuning.
 
-## Deployment
+## 🚀 Production Deployment
+
+### Prerequisites
+- Supabase account and project
+- Vercel account
+- GitHub repository
+
+### Environment Variables
+
+Create a `.env.local` file based on `.env.example`:
+
+```env
+# Database (from Supabase)
+DATABASE_URL=postgresql://...
+DIRECT_URL=postgresql://...
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# AI Provider (optional)
+AI_PROVIDER=mock
+OPENAI_API_KEY=your-key-here
+```
+
+### Database Setup
+
+1. Create a Supabase project
+2. Get your connection strings from Project Settings → Database
+3. Run migrations:
+```bash
+npx prisma migrate deploy
+```
+
+### Deploying to Vercel
+
+1. Push code to GitHub
+2. Import project in Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy!
+
+### AI Provider Setup
+
+By default, the app uses a mock AI provider. To enable real AI:
+
+1. Set `AI_PROVIDER` in environment variables
+2. Add the corresponding API key
+3. Supported providers: `openai`, `groq`, `claude`, `gemini`, `ollama`
+
+Example for OpenAI:
+```env
+AI_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+
+### Post-Deployment
+
+- Configure redirect URLs in Supabase Auth settings
+- Test authentication flow
+- Monitor logs in Vercel dashboard
+- Check database connections
+
+## 🔒 Security
+
+- All sensitive keys are server-side only
+- API routes are protected with Supabase auth
+- Input validation on all forms
+- Rate limiting implemented
+- HTTPS enforced in production
+
+## 📊 Monitoring
+
+Check these after deployment:
+- `/api/health` - Health check endpoint
+- Vercel Analytics - Performance monitoring
+- Supabase Logs - Database queries
+- Browser Console - Client-side errors
+
+## Deployment (Legacy Note)
 
 The project is a standard Next.js app and can be deployed on platforms like Vercel.  
 Make sure your `DATABASE_URL` and any future Stripe / AI provider keys are configured as environment variables.
+

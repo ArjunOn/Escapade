@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { LoginModal } from '@/components/features/auth/LoginModal';
+import { useAuth } from '@/contexts/AuthContext';
 import { MOCK_EVENTS, DiscoveryEvent } from '@/lib/data';
 import { Badge } from "@/components/ui/badge";
 import { getLocalWeekendSummary, getLocalEngagementSummary } from "@/services/analytics-service";
@@ -45,26 +46,27 @@ const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
   }, [targetDate]);
 
   return (
-    <div className="flex gap-4 font-mono text-3xl md:text-5xl font-extralight tracking-widest text-white">
+    <div className="flex gap-4 font-mono text-3xl md:text-5xl font-extralight tracking-widest text-slate-900">
       <div className="flex flex-col items-center">
         <span>{String(timeLeft.days).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase font-bold tracking-tighter opacity-40">Days</span>
+        <span className="text-[10px] uppercase font-bold tracking-tighter text-slate-400">Days</span>
       </div>
-      <span className="opacity-20">:</span>
+      <span className="text-slate-300">:</span>
       <div className="flex flex-col items-center">
         <span>{String(timeLeft.hours).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase font-bold tracking-tighter opacity-40">Hrs</span>
+        <span className="text-[10px] uppercase font-bold tracking-tighter text-slate-400">Hrs</span>
       </div>
-      <span className="opacity-20">:</span>
+      <span className="text-slate-300">:</span>
       <div className="flex flex-col items-center">
         <span>{String(timeLeft.mins).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase font-bold tracking-tighter opacity-40">Min</span>
+        <span className="text-[10px] uppercase font-bold tracking-tighter text-slate-400">Min</span>
       </div>
     </div>
   );
 };
 
 export default function Dashboard() {
+  const { user, loading: authLoading } = useAuth();
   const {
     userProfile,
     currentUserEmail,
@@ -185,7 +187,15 @@ export default function Dashboard() {
     }
   };
 
-  if (!currentUserEmail) {
+  if (authLoading || (user && !currentUserEmail)) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="text-sm font-semibold text-slate-400 animate-pulse">Loading your dashboard...</div>
+      </div>
+    );
+  }
+
+  if (!user && !currentUserEmail) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-12 py-12">
         <motion.div
@@ -241,11 +251,11 @@ export default function Dashboard() {
               transition={{ delay: 0.4 + (i * 0.1) }}
               className="space-y-4 p-6"
             >
-              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-primary mx-auto md:mx-0">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-primary mx-auto md:mx-0">
                 <feature.icon className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">{feature.title}</h3>
-              <p className="text-sm text-white/40 leading-relaxed">{feature.desc}</p>
+              <h3 className="text-lg font-bold text-slate-900">{feature.title}</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">{feature.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -352,17 +362,17 @@ export default function Dashboard() {
             /* Discovery Showcase */
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-serif italic text-white underline decoration-primary/30 underline-offset-8">Top Matched Escapades</h2>
-                <Link href="/discovery" className="text-[10px] font-bold text-primary flex items-center gap-2 group tracking-widest uppercase">
+                <h2 className="text-xl font-semibold text-slate-900">Top Matched Escapades</h2>
+                <Link href="/discover" className="text-[10px] font-bold text-primary flex items-center gap-2 group tracking-widest uppercase">
                   EXPLORE ALL <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {curatedEvents.map((event) => (
-                  <Card key={event.id} className="glass border-white/5 hover:border-primary/20 transition-all overflow-hidden relative group">
+                  <Card key={event.id} className="glass border-slate-200 hover:border-primary/20 transition-all overflow-hidden relative group">
                     <CardContent className="p-6 space-y-4">
                       <div className="flex justify-between items-start">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                           {event.icon}
                         </div>
                         <Badge variant="outline" className="border-primary/20 text-primary text-[8px] font-bold uppercase tracking-widest">
@@ -370,13 +380,13 @@ export default function Dashboard() {
                         </Badge>
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-lg font-bold text-white leading-tight">{event.title}</h4>
-                        <div className="flex items-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                        <h4 className="text-lg font-bold text-slate-900 leading-tight">{event.title}</h4>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
                           <Compass className="w-3 h-3" /> {event.location}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                        <div className="text-lg font-bold text-white">${event.cost}</div>
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+                        <div className="text-lg font-bold text-slate-900">${event.cost}</div>
                         <Button
                           size="sm"
                           disabled={event.isInitialized}
@@ -392,15 +402,15 @@ export default function Dashboard() {
                           className={cn(
                             "h-8 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
                             event.isInitialized
-                              ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default"
+                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 cursor-default"
                               : "bg-primary hover:bg-primary/90 text-white"
                           )}
                         >
                           {event.isInitialized ? (
                             <span className="flex items-center gap-2">
-                              <Check className="w-3 h-3" /> Ready
+                              <Check className="w-3 h-3" /> Added
                             </span>
-                          ) : "Initialize"}
+                          ) : "Add Activity"}
                         </Button>
                       </div>
                     </CardContent>

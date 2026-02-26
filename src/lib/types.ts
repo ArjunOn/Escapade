@@ -8,6 +8,7 @@ export interface UserProfile {
   vibes: string[];
   budgetTier: 'frugal' | 'moderate' | 'luxury';
   location: string;
+  bio?: string; // Optional user bio
   onboardingCompleted: boolean;
 }
 
@@ -85,6 +86,7 @@ export interface AppState {
   signup: (profile: UserProfile) => void;
   login: (email: string, password: string) => boolean;
   logout: () => void;
+  setAuthUser: (email: string, username?: string | null) => void;
 
   addActivity: (activity: Activity) => void;
   removeActivity: (id: string) => void;

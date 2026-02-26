@@ -13,6 +13,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { useAppStore } from '@/lib/store';
 import { LoginModal } from '@/components/features/auth/LoginModal';
+import { ProfileModal } from '@/components/features/profile/ProfileModal';
+import { PreferencesModal } from '@/components/features/profile/PreferencesModal';
+import { useAuth } from '@/contexts/AuthContext';
 import {
     Popover,
     PopoverContent,
@@ -30,13 +33,18 @@ const navItems = [
 
 export function Navbar() {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
-    const { userProfile, logout, currentUserEmail } = useAppStore();
+    const { userProfile } = useAppStore();
+    const { user, signOut } = useAuth();
+    const currentUserEmail = user?.email || null;
 
     const handleLogout = () => {
-        logout();
-        router.push('/');
+        signOut().finally(() => {
+            router.push('/');
+        });
     };
 
     const UserActions = ({ isMobile = false }) => {
@@ -45,7 +53,7 @@ export function Navbar() {
                 <Button
                     onClick={() => setIsLoginModalOpen(true)}
                     className={cn(
-                        "bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] h-9 px-4 rounded-xl shadow-lg shadow-primary/20",
+                        "bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-[10px] h-9 px-4 rounded-xl shadow-sm",
                         isMobile && "flex-1 h-12"
                     )}
                 >
@@ -61,7 +69,7 @@ export function Navbar() {
                 <Link
                     href="/onboarding"
                     className={cn(
-                        "w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center hover:bg-primary/30 transition-all group",
+                        "w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-all group",
                         isMobile && "w-12 h-12"
                     )}
                 >
@@ -74,27 +82,31 @@ export function Navbar() {
             <Popover>
                 <PopoverTrigger asChild>
                     <button className={cn(
-                        "w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group outline-none",
+                        "w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-all group outline-none",
                         isMobile && "w-12 h-12"
                     )}>
-                        <User className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
+                        <User className="w-5 h-5 text-slate-500 group-hover:text-slate-800 transition-colors" />
                     </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-56 glass border-white/10 p-2 shadow-2xl z-[100]" align="end">
-                    <div className="p-3 border-b border-white/5 mb-1">
-                        <p className="text-xs font-bold text-white truncate">{userProfile?.name || 'Commander'}</p>
-                        <p className="text-[10px] text-white/40 truncate">{currentUserEmail}</p>
+                <PopoverContent className="w-56 glass border-slate-200 p-2 shadow-xl z-[100]" align="end">
+                    <div className="p-3 border-b border-slate-200 mb-1">
+                        <p className="text-xs font-bold text-slate-900 truncate">{userProfile?.name || user?.user_metadata?.username || 'Commander'}</p>
+                        <p className="text-[10px] text-slate-500 truncate">{currentUserEmail}</p>
                     </div>
                     <div className="space-y-1">
-                        <button className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                        <button 
+                            onClick={() => setIsProfileModalOpen(true)}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all text-left">
                             <User className="w-4 h-4" /> My Profile
                         </button>
-                        <button className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                        <button 
+                            onClick={() => setIsPreferencesModalOpen(true)}
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all text-left">
                             <Settings className="w-4 h-4" /> Preferences
                         </button>
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-400/10 rounded-lg transition-all text-left"
+                            className="w-full flex items-center gap-3 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all text-left"
                         >
                             <LogOut className="w-4 h-4" /> Sign Out
                         </button>
@@ -107,12 +119,12 @@ export function Navbar() {
     return (
         <>
             {/* Desktop Navbar */}
-            <header className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-5xl h-16 glass z-50 px-8 items-center justify-between shadow-2xl transition-all border-white/5">
+            <header className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-5xl h-16 glass z-50 px-8 items-center justify-between shadow-xl transition-all border-slate-200">
                 <Link href="/" className="flex items-center gap-3 group">
-                    <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+                    <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                         <Zap className="w-5 h-5 text-white" />
                     </div>
-                    <span className="font-serif italic text-xl tracking-tighter text-white group-hover:text-primary transition-colors">Escapade</span>
+                    <span className="text-xl font-semibold tracking-tight text-slate-900 group-hover:text-primary transition-colors">Escapade</span>
                 </Link>
 
                 {currentUserEmail && (
@@ -126,15 +138,15 @@ export function Navbar() {
                                     href={item.href}
                                     className={cn(
                                         "relative px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 group",
-                                        isActive ? "text-white" : "text-white/40 hover:text-white/70"
+                                        isActive ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
                                     )}
                                 >
-                                    <Icon className={cn("w-4 h-4", isActive ? item.color : "text-white/20 group-hover:text-white/40")} />
+                                    <Icon className={cn("w-4 h-4", isActive ? item.color : "text-slate-300 group-hover:text-slate-400")} />
                                     {item.name}
                                     {isActive && (
                                         <motion.div
                                             layoutId="header-active"
-                                            className="absolute inset-0 bg-white/5 rounded-xl z-[-1] border border-white/10"
+                                            className="absolute inset-0 bg-slate-50 rounded-xl z-[-1] border border-slate-200"
                                         />
                                     )}
                                 </Link>
@@ -150,7 +162,7 @@ export function Navbar() {
 
             {/* Mobile Bottom Nav */}
             {currentUserEmail && (
-                <nav className="md:hidden fixed bottom-6 left-4 right-4 h-16 glass z-50 border-white/10 overflow-hidden px-2 shadow-2xl">
+                <nav className="md:hidden fixed bottom-6 left-4 right-4 h-16 glass z-50 border-slate-200 overflow-hidden px-2 shadow-xl">
                     <div className="flex justify-around items-center h-full">
                         {navItems.map((item) => {
                             const Icon = item.icon;
@@ -159,12 +171,12 @@ export function Navbar() {
                                 <Link key={item.href} href={item.href} className="relative flex flex-col items-center justify-center p-2 flex-1">
                                     <Icon className={cn(
                                         "w-5 h-5 transition-all mb-1",
-                                        isActive ? item.color : "text-white/40"
+                                        isActive ? item.color : "text-slate-400"
                                     )} />
                                     {isActive && (
                                         <motion.div
                                             layoutId="bottom-nav-active"
-                                            className="absolute inset-0 bg-white/5 rounded-xl z-[-1]"
+                                            className="absolute inset-0 bg-slate-50 rounded-xl z-[-1]"
                                         />
                                     )}
                                 </Link>
@@ -186,6 +198,16 @@ export function Navbar() {
             <LoginModal
                 isOpen={isLoginModalOpen}
                 onClose={() => setIsLoginModalOpen(false)}
+            />
+            
+            <ProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+            />
+
+            <PreferencesModal
+                isOpen={isPreferencesModalOpen}
+                onClose={() => setIsPreferencesModalOpen(false)}
             />
         </>
     );

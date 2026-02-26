@@ -1,120 +1,189 @@
-"use client";
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Zap, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { useAppStore } from '@/lib/store';
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
+import { Zap, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react'
+import { validateSignupForm } from '@/lib/validation'
 
 export default function SignupPage() {
-    const router = useRouter();
-    const signup = useAppStore(state => state.signup);
-    const [isLoading, setIsLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        password: '',
-    });
+  const router = useRouter()
+  const { signUp, loading } = useAuth()
+  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [errors, setErrors] = useState<{ username?: string; email?: string; password?: string }>({})
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
-    const handleSignup = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setErrors({})
 
+    // Validate form
+    const validation = validateSignupForm(email, password, username)
+    if (!validation.valid) {
+      setErrors(validation.errors)
+      return
+    }
+
+    try {
+      await signUp(email, password, username)
+      setSuccess(true)
+      // Wait for session to be established, then redirect
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      window.location.href = '/dashboard'
+    } catch (err: any) {
+      // Filter out email rate limit errors
+      const errorMsg = err.message?.toLowerCase() || ''
+      if (errorMsg.includes('email rate limit') || errorMsg.includes('rate limit exceeded')) {
+        // Account created successfully, just email service busy
+        setSuccess(true)
         setTimeout(() => {
-            signup({
-                name: formData.name,
-                email: formData.email,
-                password: formData.password,
-                preferences: [],
-                vibes: [],
-                budgetTier: 'moderate',
-                location: '',
-                onboardingCompleted: false
-            });
-            router.push('/onboarding');
-        }, 1200);
-    };
+          window.location.href = '/dashboard'
+        }, 1500)
+      } else {
+        setError(err.message || 'Failed to create account')
+      }
+    }
+  }
 
+  if (success) {
     return (
-        <div className="min-h-screen flex items-center justify-center py-12 px-4 relative">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-full max-w-md z-10"
-            >
-                <div className="flex justify-center mb-8">
-                    <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                        <Zap className="w-6 h-6 text-white" />
-                    </div>
-                </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+        <Card className="w-full max-w-md shadow-xl border-gray-100">
+          <CardContent className="pt-16 pb-16 text-center space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Account Created!</h2>
+            <p className="text-gray-600">Redirecting to your dashboard...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
-                <Card className="glass border-white/5 shadow-2xl overflow-hidden">
-                    <CardHeader className="space-y-1 text-center pb-8 border-b border-white/5">
-                        <CardTitle className="text-3xl font-serif italic tracking-tight text-white">Join the Escapade</CardTitle>
-                        <CardDescription className="text-white/40 font-medium">Create your credentials to begin the journey.</CardDescription>
-                    </CardHeader>
-                    <form onSubmit={handleSignup}>
-                        <CardContent className="space-y-4 pt-8">
-                            <div className="space-y-2">
-                                <Label htmlFor="name" className="text-white/60 font-bold uppercase tracking-widest text-[10px]">Full Name</Label>
-                                <Input
-                                    id="name"
-                                    placeholder="Mission Commander"
-                                    type="text"
-                                    required
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="email" className="text-white/60 font-bold uppercase tracking-widest text-[10px]">Email Address</Label>
-                                <Input
-                                    id="email"
-                                    placeholder="commander@escapade.net"
-                                    type="email"
-                                    required
-                                    value={formData.email}
-                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                    className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="password" className="text-white/60 font-bold uppercase tracking-widest text-[10px]">Access Pin</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    required
-                                    value={formData.password}
-                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    className="bg-white/5 border-white/10 text-white h-11"
-                                />
-                            </div>
-                            <Button className="w-full h-11 bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-xs mt-4" disabled={isLoading}>
-                                {isLoading ? "Synchronizing..." : "Create Account"}
-                                {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
-                            </Button>
-                        </CardContent>
-                    </form>
-                    <CardFooter className="flex flex-col space-y-4 pb-8 border-t border-white/5 mt-4">
-                        <div className="relative w-full text-center">
-                            <span className="bg-transparent px-2 text-[10px] text-white/30 uppercase font-bold tracking-[0.3em]">Access Restricted</span>
-                        </div>
-                        <p className="text-xs text-center text-white/40">
-                            Already a member?{' '}
-                            <Link href="/login" className="text-primary hover:text-primary/80 font-bold underline underline-offset-4">
-                                Log in
-                            </Link>
-                        </p>
-                    </CardFooter>
-                </Card>
-            </motion.div>
-        </div>
-    );
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+      <Card className="w-full max-w-md shadow-xl border-gray-100">
+        <CardHeader className="space-y-4 text-center">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-primary flex items-center justify-center">
+            <Zap className="w-6 h-6 text-white" />
+          </div>
+          <CardTitle className="text-3xl font-bold text-gray-900">
+            Create Account
+          </CardTitle>
+          <CardDescription className="text-gray-600">
+            Start planning better weekends today
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-sm font-semibold text-gray-700">
+                Username
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Choose a username"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value)
+                    setErrors({ ...errors, username: undefined })
+                  }}
+                  className={`pl-10 h-12 bg-gray-50 border-gray-200 ${errors.username ? 'border-red-300 bg-red-50' : ''}`}
+                  required
+                />
+              </div>
+              {errors.username && (
+                <p className="text-xs text-red-600 mt-1">{errors.username}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setErrors({ ...errors, email: undefined })
+                  }}
+                  className={`pl-10 h-12 bg-gray-50 border-gray-200 ${errors.email ? 'border-red-300 bg-red-50' : ''}`}
+                  required
+                />
+              </div>
+              {errors.email && (
+                <p className="text-xs text-red-600 mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="At least 8 characters"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value)
+                    setErrors({ ...errors, password: undefined })
+                  }}
+                  className={`pl-10 h-12 bg-gray-50 border-gray-200 ${errors.password ? 'border-red-300 bg-red-50' : ''}`}
+                  required
+                />
+              </div>
+              {errors.password && (
+                <p className="text-xs text-red-600 mt-1">{errors.password}</p>
+              )}
+              <p className="text-xs text-gray-500">Must be 8+ characters with letters and numbers</p>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 bg-primary hover:bg-primary-dark text-white font-semibold text-base"
+            >
+              {loading ? 'Creating account...' : 'Create Account'}
+            </Button>
+
+            <p className="text-center text-sm text-gray-600">
+              Already have an account?{' '}
+              <Link href="/login" className="text-primary font-semibold hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
+

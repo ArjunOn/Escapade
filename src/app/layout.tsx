@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Open_Sans } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { RouteGuard } from "@/components/layout/RouteGuard";
+import { AuthProvider } from "@/contexts/AuthContext";
 
-const inter = Inter({
-  variable: "--font-inter",
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
   subsets: ["latin"],
 });
 
@@ -23,15 +24,17 @@ export default function RootLayout({
     <html lang="en">
       <body
         suppressHydrationWarning={true}
-        className={`${inter.variable} antialiased min-h-screen bg-background text-foreground relative overflow-x-hidden`}
+        className={`${openSans.variable} antialiased min-h-screen bg-background text-foreground relative overflow-x-hidden`}
       >
-        <RouteGuard>
-          <Navbar />
+        <AuthProvider>
+          <RouteGuard>
+            <Navbar />
 
-          <main className="container mx-auto px-4 py-4 pt-20 md:py-8 md:pt-24 max-w-5xl relative z-10 pb-24 md:pb-8 lg:pl-0">
-            {children}
-          </main>
-        </RouteGuard>
+            <main className="container mx-auto px-4 py-4 pt-20 md:py-8 md:pt-24 max-w-5xl relative z-10 pb-24 md:pb-8 lg:pl-0">
+              {children}
+            </main>
+          </RouteGuard>
+        </AuthProvider>
       </body>
     </html>
   );

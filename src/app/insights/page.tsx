@@ -21,7 +21,7 @@ export default function InsightsPage() {
   return (
     <div className="space-y-8 py-4">
       <div className="space-y-2">
-        <h1>Weekend insights</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-slate-900">Weekend Insights</h1>
         <p className="text-sm text-slate-500">
           A gentle overview of how you spend your time and budget across weekends.
         </p>

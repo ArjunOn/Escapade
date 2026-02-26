@@ -91,12 +91,12 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
         <div className="space-y-8">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
-                    <h2 className="text-3xl font-serif italic text-white tracking-tight">Logistics Overview</h2>
-                    <p className="text-white/40 text-sm font-medium">Tracking intelligence on all financial outbound packages.</p>
+                    <h2 className="text-3xl font-semibold text-slate-900 tracking-tight">Logistics Overview</h2>
+                    <p className="text-slate-600 text-sm font-medium">Tracking intelligence on all financial outbound packages.</p>
                 </div>
-                <div className="flex bg-white/5 border border-white/5 rounded-2xl p-4 gap-6 items-center">
+                <div className="flex bg-white border border-slate-200 rounded-2xl p-4 gap-6 items-center">
                     <div className="text-center group relative cursor-pointer" onClick={() => !isEditingGoal && setIsEditingGoal(true)}>
-                        <div className="text-[10px] uppercase font-bold text-white/40 mb-1 flex items-center gap-1 justify-center">
+                        <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1 justify-center">
                             Weekly Goal
                             {!isEditingGoal && <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
                         </div>
@@ -106,7 +106,7 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                     type="number"
                                     value={goalInput}
                                     onChange={(e) => setGoalInput(e.target.value)}
-                                    className="h-8 w-24 bg-white/10 border-white/20 text-white text-lg font-bold p-1 text-center"
+                                    className="h-8 w-24 bg-slate-50 border-slate-200 text-slate-900 text-lg font-bold p-1 text-center"
                                     autoFocus
                                     onBlur={saveGoal}
                                     onKeyDown={(e) => e.key === 'Enter' && saveGoal()}
@@ -116,22 +116,22 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                 </Button>
                             </div>
                         ) : (
-                            <div className="text-xl font-bold text-white">${weeklySavingsGoal}</div>
+                            <div className="text-xl font-bold text-slate-900">${weeklySavingsGoal}</div>
                         )}
                     </div>
-                    <div className="w-px bg-white/10 h-10" />
+                    <div className="w-px bg-slate-200 h-10" />
                     <div className="text-center">
-                        <div className="text-[10px] uppercase font-bold text-white/40 mb-1">Spent</div>
-                        <div className="text-xl font-bold text-white">${totalSpent.toFixed(0)}</div>
+                        <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Spent</div>
+                        <div className="text-xl font-bold text-slate-900">${totalSpent.toFixed(0)}</div>
                     </div>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Visual Analytics */}
-                <Card className="glass border-white/5 flex flex-col items-center justify-center min-h-[400px]">
+                <Card className="glass border-slate-200 flex flex-col items-center justify-center min-h-[400px]">
                     <CardHeader className="w-full text-center pb-0">
-                        <CardTitle className="text-lg font-serif italic text-white/60">Fund Distribution</CardTitle>
+                        <CardTitle className="text-lg font-semibold text-slate-700">Fund Distribution</CardTitle>
                     </CardHeader>
                     <CardContent className="w-full h-full p-8 pt-0">
                         <div className="h-[300px] w-full">
@@ -150,8 +150,8 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                         ))}
                                     </Pie>
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                                        itemStyle={{ color: '#fff' }}
+                                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px' }}
+                                        itemStyle={{ color: '#0f172a' }}
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -160,7 +160,7 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                             {chartData.map((item) => (
                                 <div key={item.name} className="flex items-center gap-2">
                                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{item.name}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{item.name}</span>
                                 </div>
                             ))}
                         </div>
@@ -168,43 +168,43 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                 </Card>
 
                 {/* Logistics Input */}
-                <Card className="glass border-white/5">
+                <Card className="glass border-slate-200">
                     <CardHeader>
-                        <CardTitle className="text-xl font-serif italic text-white">Log New Expense</CardTitle>
-                        <CardDescription className="text-white/40">Enter outbound logistics details for synchronization.</CardDescription>
+                        <CardTitle className="text-xl font-semibold text-slate-900">Log New Expense</CardTitle>
+                        <CardDescription className="text-slate-600">Enter outbound logistics details for synchronization.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-bold tracking-widest text-white/40">Amount ($)</Label>
+                                <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Amount ($)</Label>
                                 <Input
                                     type="number"
                                     placeholder="0.00"
                                     value={amount}
                                     onChange={e => setAmount(e.target.value)}
-                                    className="bg-white/5 border-white/10 text-white"
+                                    className="bg-slate-50 border-slate-200 text-slate-900"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-bold tracking-widest text-white/40">Classification</Label>
+                                <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Classification</Label>
                                 <select
                                     value={category}
                                     onChange={e => setCategory(e.target.value as any)}
-                                    className="w-full h-10 rounded-md bg-white/5 border border-white/10 text-white text-xs px-3 outline-none"
+                                    className="w-full h-10 rounded-md bg-slate-50 border border-slate-200 text-slate-900 text-xs px-3 outline-none"
                                 >
                                     {['Social', 'Relaxation', 'Outdoor', 'Sports', 'Events', 'Traveling', 'Other'].map(c => (
-                                        <option key={c} value={c} className="bg-slate-900">{c}</option>
+                                        <option key={c} value={c} className="bg-white text-slate-900">{c}</option>
                                     ))}
                                 </select>
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] uppercase font-bold tracking-widest text-white/40">Description</Label>
+                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Description</Label>
                             <Input
                                 placeholder="Package details..."
                                 value={desc}
                                 onChange={e => setDesc(e.target.value)}
-                                className="bg-white/5 border-white/10 text-white"
+                                className="bg-slate-50 border-slate-200 text-slate-900"
                             />
                         </div>
                         <Button onClick={handleAdd} className="w-full bg-primary hover:bg-primary/90 text-white h-12 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">
@@ -215,15 +215,15 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
             </div>
 
             {/* Logistics Ledger */}
-            <Card className="glass border-white/5 overflow-hidden">
-                <CardHeader className="bg-white/5 border-b border-white/5 px-8 flex flex-row items-center justify-between">
+            <Card className="glass border-slate-200 overflow-hidden">
+                <CardHeader className="bg-slate-50 border-b border-slate-200 px-8 flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle className="text-xl font-serif italic text-white">Internal Ledger</CardTitle>
-                        <CardDescription className="text-white/40">Historical log of all validated financial operations.</CardDescription>
+                        <CardTitle className="text-xl font-semibold text-slate-900">Internal Ledger</CardTitle>
+                        <CardDescription className="text-slate-600">Historical log of all validated financial operations.</CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="divide-y divide-white/5">
+                    <div className="divide-y divide-slate-200">
                         <AnimatePresence>
                             {expenses.length > 0 ? expenses.map((exp) => (
                                 <motion.div
@@ -231,7 +231,7 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="p-6 flex items-center justify-between group hover:bg-white/5 transition-colors"
+                                    className="p-6 flex items-center justify-between group hover:bg-slate-50 transition-colors"
                                 >
                                     <div className="flex items-center gap-6">
                                         <div className={cn(
@@ -249,37 +249,37 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                                 <Input
                                                     value={editDesc}
                                                     onChange={e => setEditDesc(e.target.value)}
-                                                    className="bg-white/5 border-white/10 text-white h-8 text-sm"
+                                                    className="bg-slate-50 border-slate-200 text-slate-900 h-8 text-sm"
                                                 />
                                                 <Input
                                                     type="number"
                                                     value={editAmount}
                                                     onChange={e => setEditAmount(e.target.value)}
-                                                    className="bg-white/5 border-white/10 text-white h-8 text-sm w-32"
+                                                    className="bg-slate-50 border-slate-200 text-slate-900 h-8 text-sm w-32"
                                                 />
                                             </div>
                                         ) : (
                                             <div>
-                                                <div className="font-bold text-white group-hover:text-primary transition-colors">{exp.description || 'Logistics Package'}</div>
-                                                <div className="text-xs text-white/30 uppercase font-bold tracking-widest">{exp.category} • {new Date(exp.date).toLocaleDateString()}</div>
+                                                <div className="font-bold text-slate-900 group-hover:text-primary transition-colors">{exp.description || 'Logistics Package'}</div>
+                                                <div className="text-xs text-slate-500 uppercase font-bold tracking-widest">{exp.category} • {new Date(exp.date).toLocaleDateString()}</div>
                                             </div>
                                         )}
                                     </div>
                                     <div className="flex items-center gap-6">
-                                        <div className="text-xl font-bold text-white">${exp.amount}</div>
+                                        <div className="text-xl font-bold text-slate-900">${exp.amount}</div>
                                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {editingId === exp.id ? (
                                                 <>
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10" onClick={() => saveEdit(exp.id)}>
                                                         <Save className="w-4 h-4" />
                                                     </Button>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/10" onClick={() => setEditingId(null)}>
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100" onClick={() => setEditingId(null)}>
                                                         <X className="w-4 h-4" />
                                                     </Button>
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/10" onClick={() => startEditing(exp)}>
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100" onClick={() => startEditing(exp)}>
                                                         <Edit2 className="w-4 h-4" />
                                                     </Button>
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400/60 hover:text-red-400 hover:bg-red-400/10" onClick={() => removeExpense(exp.id)}>
@@ -291,7 +291,7 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                     </div>
                                 </motion.div>
                             )) : (
-                                <div className="p-12 text-center text-white/20 italic">No historical ledger found. Synchronize logistics to populate records.</div>
+                                <div className="p-12 text-center text-slate-400 italic">No historical ledger found. Synchronize logistics to populate records.</div>
                             )}
                         </AnimatePresence>
                     </div>
@@ -299,20 +299,20 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
             </Card>
             {/* Mission History */}
             {history && history.length > 0 && (
-                <div className="space-y-6 pt-12 border-t border-white/5">
+                <div className="space-y-6 pt-12 border-t border-slate-200">
                     <div className="space-y-1">
-                        <h3 className="text-2xl font-serif italic text-white tracking-tight">Mission Archive</h3>
-                        <p className="text-white/40 text-sm font-medium">Post-operation analysis of previous deployment windows.</p>
+                        <h3 className="text-2xl font-semibold text-slate-900 tracking-tight">Mission Archive</h3>
+                        <p className="text-slate-600 text-sm font-medium">Post-operation analysis of previous deployment windows.</p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {history.map((mission) => (
-                            <Card key={mission.id} className="glass border-white/5 hover:border-primary/20 transition-all group">
+                            <Card key={mission.id} className="glass border-slate-200 hover:border-primary/20 transition-all group">
                                 <CardHeader className="p-6 pb-2">
                                     <div className="flex justify-between items-start">
-                                        <CardTitle className="text-lg font-serif italic text-white group-hover:text-primary transition-colors">
+                                        <CardTitle className="text-lg font-semibold text-slate-900 group-hover:text-primary transition-colors">
                                             {mission.weekLabel}
                                         </CardTitle>
-                                        <div className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                             {new Date(mission.date).getFullYear()}
                                         </div>
                                     </div>
@@ -320,16 +320,16 @@ export function BudgetTracker({ compact = false }: { compact?: boolean }) {
                                 <CardContent className="p-6 pt-0 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <div className="text-[8px] uppercase font-bold tracking-widest text-white/40 mb-1">Total Spent</div>
-                                            <div className="text-xl font-bold text-white">${mission.totalSpent}</div>
+                                            <div className="text-[8px] uppercase font-bold tracking-widest text-slate-500 mb-1">Total Spent</div>
+                                            <div className="text-xl font-bold text-slate-900">${mission.totalSpent}</div>
                                         </div>
                                         <div>
-                                            <div className="text-[8px] uppercase font-bold tracking-widest text-white/40 mb-1">Savings Goal</div>
-                                            <div className="text-xl font-bold text-white">${mission.savingsGoal}</div>
+                                            <div className="text-[8px] uppercase font-bold tracking-widest text-slate-500 mb-1">Savings Goal</div>
+                                            <div className="text-xl font-bold text-slate-900">${mission.savingsGoal}</div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4 pt-4 border-t border-white/5">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                                    <div className="flex items-center gap-4 pt-4 border-t border-slate-200">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                                             <Rocket className="w-3 h-3 text-primary" /> {mission.activitiesCount} Missions
                                         </div>
                                         <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${mission.totalSpent <= mission.savingsGoal ? 'text-emerald-400' : 'text-red-400'

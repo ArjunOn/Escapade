@@ -2,44 +2,72 @@
 
 import { useState } from "react";
 import { useAppStore } from "@/store";
-import { getLocalRecommendations } from "@/services/recommendation-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Bot, Wand2 } from "lucide-react";
 
 export default function AiCompanionPage() {
-  const { userProfile, activities, expenses, weeklySavingsGoal } = useAppStore();
+  const { userProfile, activities, expenses, weeklySavingsGoal, history } = useAppStore();
   const [input, setInput] = useState("");
   const [response, setResponse] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAsk = () => {
-    const recommendations = getLocalRecommendations({
-      userProfile,
-      activities,
-      expenses,
-      weeklySavingsGoal,
-      availableHours: 8,
-    });
+  const handleAsk = async () => {
+    setIsGenerating(true);
+    setError(null);
 
-    const top = recommendations[0];
-    const suggestion = top
-      ? `How about "${top.title}" in ${top.location}? It ${top.reason.toLowerCase()}.`
-      : "Once you add a few preferences and a budget, I’ll start suggesting weekends that fit you.";
+    if (!userProfile) {
+      setError("Complete onboarding to unlock AI planning.");
+      setIsGenerating(false);
+      return;
+    }
 
-    const baseIntro =
-      "This is a mock companion today, ready for a future AI brain tomorrow.";
+    try {
+      const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+      const response = await fetch("/api/ai/plan-weekend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          preferences: userProfile.preferences || [],
+          vibes: userProfile.vibes || [],
+          currentActivities: activities,
+          weeklyBudget: weeklySavingsGoal || 0,
+          totalSpent,
+          availableHours: 16,
+          recentHistory: history || [],
+          prompt: input,
+        }),
+      });
 
-    setResponse(`${baseIntro}\n\n${suggestion}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          setError(data.message || "Upgrade required.");
+        } else {
+          throw new Error(data.message || "Failed to generate plan");
+        }
+        return;
+      }
+
+      setResponse(data.plan);
+    } catch (err: any) {
+      setError(err.message || "Failed to generate weekend plan");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
     <div className="space-y-8 py-4">
       <div className="space-y-2">
-        <h1>AI companion (coming soon)</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-slate-900\">AI Companion</h1>
         <p className="text-sm text-slate-500">
-          Draft natural language plans like “low-budget cozy weekend with friends”, and Escapade
-          will turn it into activities and budget suggestions.
+          Describe your ideal weekend in natural language, and I'll suggest activities and a budget breakdown that fits your vibe.
         </p>
       </div>
 
@@ -62,13 +90,15 @@ export default function AiCompanionPage() {
               type="button"
               onClick={handleAsk}
               className="inline-flex items-center gap-2"
+              disabled={isGenerating}
             >
               <Sparkles className="w-4 h-4" />
-              Mock plan my weekend
+              {isGenerating ? "Planning..." : "Plan my weekend"}
             </Button>
+            {error && <p className="text-xs text-red-500">{error}</p>}
             <p className="text-xs text-slate-500">
-              Under the hood, this page is wired to the recommendation engine and is ready to swap
-              in a real OpenAI call.
+              This flow now calls the server-side AI endpoint so you can swap providers without
+              touching the UI.
             </p>
           </CardContent>
         </Card>
@@ -86,8 +116,7 @@ export default function AiCompanionPage() {
                 "Ask for any kind of weekend—budget-friendly, outdoorsy, social, or slow and restorative—and I’ll suggest a gentle starting point."}
             </div>
             <p className="text-xs text-slate-500">
-              To plug in a live model, replace the mock handler with an API route that calls your
-              provider of choice and passes in the same context.
+              If AI is disabled, you will see a friendly error here until the provider is enabled.
             </p>
           </CardContent>
         </Card>

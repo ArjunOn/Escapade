@@ -29,3 +29,13 @@ export function canAccessFeature(
   return order.indexOf(tier) >= order.indexOf(config.minTier);
 }
 
+// For API routes - checks if user has access to a feature
+// In production, this should fetch the user's subscription tier from the database
+export async function isFeatureEnabled(userId: string, feature: FeatureKey): Promise<boolean> {
+  // For now, return true for all features (free tier has access to everything)
+  // In production, you would:
+  // 1. Fetch user subscription tier from database
+  // 2. Call canAccessFeature(userTier, feature)
+  return true;
+}
+

@@ -75,6 +75,55 @@ export const useAppStore = create<AppState>()(
                 });
             },
 
+            setAuthUser: (email: string, username?: string | null) => {
+                if (!email) return;
+
+                const accounts = get().accounts;
+                const existing = accounts[email];
+
+                if (!existing) {
+                    const safeName = username?.trim() || email.split('@')[0] || 'Explorer';
+                    const newProfile: UserProfile = {
+                        name: safeName,
+                        email,
+                        password: undefined,
+                        preferences: [],
+                        vibes: [],
+                        budgetTier: 'moderate',
+                        location: '',
+                        onboardingCompleted: false
+                    };
+
+                    const newUserContent: UserData = {
+                        activities: [],
+                        expenses: [],
+                        journalEntries: [],
+                        weeklySavingsGoal: 0,
+                        userProfile: newProfile,
+                        history: [],
+                        initializedEventIds: []
+                    };
+
+                    set((state) => ({
+                        accounts: { ...state.accounts, [email]: newUserContent },
+                        currentUserEmail: email,
+                        ...newUserContent
+                    }));
+                    return;
+                }
+
+                set({
+                    currentUserEmail: email,
+                    activities: existing.activities || [],
+                    expenses: existing.expenses || [],
+                    journalEntries: existing.journalEntries || [],
+                    weeklySavingsGoal: existing.weeklySavingsGoal || 0,
+                    userProfile: existing.userProfile,
+                    history: existing.history || [],
+                    initializedEventIds: existing.initializedEventIds || []
+                });
+            },
+
             // Data Actions (These update both active state AND the account record)
             addActivity: (activity: Activity) => {
                 const email = get().currentUserEmail;

@@ -49,17 +49,17 @@ export default function JournalPage() {
                     <BookOpen className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Temporal reflection</span>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-serif italic text-white tracking-tight">Internal Log</h1>
-                <p className="text-white/40 font-medium">Capturing neural signals and gratitude for the escape.</p>
+                <h1 className="text-4xl md:text-6xl font-semibold text-slate-900 tracking-tight">Internal Log</h1>
+                <p className="text-slate-600 font-medium">Capturing neural signals and gratitude for the escape.</p>
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Input Column */}
                 <div className="lg:col-span-12">
-                    <Card className="glass border-white/5 overflow-hidden">
-                        <CardHeader className="p-8 border-b border-white/5 bg-white/[0.02]">
-                            <CardTitle className="text-2xl font-serif italic text-white">New Submission</CardTitle>
-                            <CardDescription className="text-white/40">Gratitude for the Escape: What defined your journey today?</CardDescription>
+                    <Card className="glass border-slate-200 overflow-hidden">
+                        <CardHeader className="p-8 border-b border-slate-200 bg-slate-50">
+                            <CardTitle className="text-2xl font-semibold text-slate-900">New Submission</CardTitle>
+                            <CardDescription className="text-slate-600">Gratitude for the Escape: What defined your journey today?</CardDescription>
                         </CardHeader>
                         <CardContent className="p-8 space-y-8">
                             <div className="flex flex-wrap justify-center gap-3">
@@ -71,8 +71,8 @@ export default function JournalPage() {
                                         className={cn(
                                             "flex flex-col h-auto py-4 px-6 gap-2 rounded-2xl border transition-all min-w-[100px]",
                                             mood === m
-                                                ? "bg-primary/20 border-primary text-white shadow-lg shadow-primary/10"
-                                                : "bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:border-white/10"
+                                                ? "bg-primary/10 border-primary text-slate-900 shadow-sm"
+                                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
                                         )}
                                     >
                                         {getMoodIcon(m)}
@@ -84,16 +84,16 @@ export default function JournalPage() {
                             <div className="relative">
                                 <Textarea
                                     placeholder="Begin neural uplink..."
-                                    className="min-h-[200px] bg-white/5 border-white/10 text-white placeholder:text-white/10 rounded-2xl p-6 text-lg font-serif italic focus-visible:ring-primary/50"
+                                    className="min-h-[200px] bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-2xl p-6 text-lg focus-visible:ring-primary/50"
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
                                 />
-                                <div className="absolute top-4 right-4 text-white/10 pointer-events-none">
+                                <div className="absolute top-4 right-4 text-slate-200 pointer-events-none">
                                     <MessageSquare className="w-12 h-12" />
                                 </div>
                             </div>
 
-                            <Button onClick={handleSubmit} className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20">
+                            <Button onClick={handleSubmit} className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-xs shadow-sm">
                                 <Rocket className="w-4 h-4 mr-3" /> Record Entry
                             </Button>
                         </CardContent>
@@ -102,7 +102,7 @@ export default function JournalPage() {
 
                 {/* Historical Log Column */}
                 <div className="lg:col-span-12 space-y-6">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20 ml-2">Historical Records</h2>
+                    <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-slate-400 ml-2">Historical Records</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <AnimatePresence>
                             {journalEntries.length > 0 ? journalEntries.map(entry => (
@@ -112,15 +112,15 @@ export default function JournalPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="group"
                                 >
-                                    <Card className="glass border-white/10 hover:border-primary/30 transition-all h-full flex flex-col">
-                                        <CardHeader className="pb-4 flex flex-row items-center justify-between border-b border-white/5">
+                                    <Card className="glass border-slate-200 hover:border-primary/30 transition-all h-full flex flex-col">
+                                        <CardHeader className="pb-4 flex flex-row items-center justify-between border-b border-slate-200">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200">
                                                     {getMoodIcon(entry.mood)}
                                                 </div>
                                                 <div>
-                                                    <CardTitle className="text-sm font-serif italic text-white">Log Entry</CardTitle>
-                                                    <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                                    <CardTitle className="text-sm font-semibold text-slate-900">Log Entry</CardTitle>
+                                                    <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 text-slate-500">
                                                         <CalendarIcon className="w-2.5 h-2.5" /> {new Date(entry.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
                                                     </CardDescription>
                                                 </div>
@@ -128,12 +128,12 @@ export default function JournalPage() {
                                             {(entry.mood === 'Happy' || entry.mood === 'Excited') && <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />}
                                         </CardHeader>
                                         <CardContent className="pt-6 flex-1">
-                                            <p className="text-sm leading-relaxed text-white/60 font-serif italic">"{entry.text}"</p>
+                                            <p className="text-sm leading-relaxed text-slate-600">"{entry.text}"</p>
                                         </CardContent>
                                     </Card>
                                 </motion.div>
                             )) : (
-                                <div className="col-span-full py-20 text-center text-white/10 italic">No historical records synchronized.</div>
+                                <div className="col-span-full py-20 text-center text-slate-400 italic">No historical records synchronized.</div>
                             )}
                         </AnimatePresence>
                     </div>
