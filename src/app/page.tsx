@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useEffect, useState } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useAppStore } from '@/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Zap, Sparkles, Clock, Wallet, ArrowRight,
@@ -18,6 +18,9 @@ import { useRouter } from 'next/navigation';
 import { LoginModal } from '@/components/features/auth/LoginModal';
 import { MOCK_EVENTS, DiscoveryEvent } from '@/lib/data';
 import { Badge } from "@/components/ui/badge";
+import { getLocalWeekendSummary, getLocalEngagementSummary } from "@/services/analytics-service";
+import { getLocalGamificationSummary } from "@/services/gamification-service";
+import { getLocalRecommendations } from "@/services/recommendation-service";
 
 // Helper for countdown
 const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
@@ -68,6 +71,7 @@ export default function Dashboard() {
     expenses,
     weeklySavingsGoal,
     activities,
+    history,
     setWeeklySavingsGoal,
     initializeEvent,
     initializedEventIds,
@@ -114,6 +118,31 @@ export default function Dashboard() {
   const savingsProgress = Math.min((totalSpentThisWeek / (weeklySavingsGoal || 1)) * 100, 100);
   const savingsRemaining = Math.max((weeklySavingsGoal || 0) - totalSpentThisWeek, 0);
 
+  const weekendSummary = useMemo(
+    () =>
+      getLocalWeekendSummary({
+        activities,
+        expenses,
+        weeklySavingsGoal,
+      }),
+    [activities, expenses, weeklySavingsGoal]
+  );
+
+  const engagementSummary = useMemo(
+    () => getLocalEngagementSummary({ history }),
+    [history]
+  );
+
+  const gamification = useMemo(
+    () => getLocalGamificationSummary({ activities, history }),
+    [activities, history]
+  );
+
+  const availableHours = useMemo(() => {
+    const idealWeekendHours = 16; // two 8-hour blocks as a soft target
+    return Math.max(idealWeekendHours - weekendSummary.totalHoursPlanned, 0);
+  }, [weekendSummary.totalHoursPlanned]);
+
   const curatedEvents = useMemo(() => {
     if (!userProfile) return [];
     return MOCK_EVENTS.map(event => {
@@ -126,7 +155,7 @@ export default function Dashboard() {
         isInitialized
       };
     }).sort((a, b) => b.priority - a.priority).slice(0, 2);
-  }, [userProfile, initializedEventIds]);
+  }, [userProfile, initializedEventIds, activities]);
 
   const trendingEvents = useMemo(() => {
     return MOCK_EVENTS.filter(e => !curatedEvents.some(ce => ce.id === e.id))
@@ -135,6 +164,18 @@ export default function Dashboard() {
         isInitialized: activities.some(a => a.originalEventId === event.id)
       })).slice(0, 3);
   }, [curatedEvents, activities]);
+
+  const smartSuggestions = useMemo(
+    () =>
+      getLocalRecommendations({
+        userProfile: userProfile ?? null,
+        activities,
+        expenses,
+        weeklySavingsGoal,
+        availableHours,
+      }),
+    [userProfile, activities, expenses, weeklySavingsGoal, availableHours]
+  );
 
   const saveGoal = () => {
     const val = parseFloat(goalInput);
@@ -152,16 +193,17 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-6 max-w-2xl"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-[0.3em] mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold uppercase tracking-[0.25em] mb-4">
             <Sparkles className="w-4 h-4" />
-            Your Weekend, Engineered
+            Your weekend, gently organized
           </div>
-          <h1 className="text-5xl md:text-7xl font-serif italic text-white tracking-tight leading-tight">
-            Escape the <span className="text-primary">Ordinary.</span>
+          <h1 className="text-4xl md:text-5xl font-semibold text-slate-900 tracking-tight leading-tight">
+            Escape the ordinary,{" "}
+            <span className="text-primary">without burning out.</span>
           </h1>
-          <p className="text-lg md:text-xl text-white/40 font-medium leading-relaxed px-4">
-            Escapade is your intelligent mission control for weekend adventures.
-            Plan, discover, and budget your escapes with precision.
+          <p className="text-base md:text-lg text-slate-500 font-medium leading-relaxed px-4">
+            Escapade is a calm weekend companion that balances time, budget, and energy
+            so you can look forward to your days off—without spreadsheets or stress.
           </p>
         </motion.div>
 
@@ -172,7 +214,7 @@ export default function Dashboard() {
           className="flex flex-col sm:flex-row gap-4 items-center"
         >
           <Link href="/signup">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold uppercase tracking-widest text-xs h-14 px-10 rounded-2xl shadow-2xl shadow-primary/20 group">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold tracking-wide text-xs h-12 px-8 rounded-2xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] group">
               Get Started <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
@@ -180,17 +222,17 @@ export default function Dashboard() {
             variant="outline"
             size="lg"
             onClick={() => setIsLoginModalOpen(true)}
-            className="border-white/10 hover:bg-white/5 text-white font-bold uppercase tracking-widest text-xs h-14 px-10 rounded-2xl"
+            className="border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs h-12 px-8 rounded-2xl"
           >
-            Personnel Sign In
+            I already have an account
           </Button>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-12 border-t border-white/5 pt-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-12 border-t border-slate-200 pt-12">
           {[
-            { icon: Target, title: "Precision Planning", desc: "Military-grade logistics for your leisure time." },
-            { icon: Wallet, title: "Budget Intelligence", desc: "Maximize your fun per dollar with smart tracking." },
-            { icon: Compass, title: "Smart Discovery", desc: "Hand-picked experiences tailored to your vibe." }
+            { icon: Target, title: "Gentle planning", desc: "A simple weekend canvas for time, energy, and money." },
+            { icon: Wallet, title: "Kind-to-you budgeting", desc: "Stay mindful of money with soft nudges, not alarms." },
+            { icon: Compass, title: "Discovery that fits", desc: "Ideas that match your mood, budget, and free hours." }
           ].map((feature, i) => (
             <motion.div
               key={feature.title}
@@ -219,36 +261,40 @@ export default function Dashboard() {
   if (!userProfile) return null;
 
   return (
-    <div className="space-y-12 py-6">
+    <div className="space-y-10 py-6">
       {/* Header / Mode Indicator */}
       <header className="space-y-2 relative">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-primary"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-semibold uppercase tracking-wide text-primary"
         >
           {isSavingMode ? (
             <>
               <ShieldCheck className="w-3 h-3" />
-              Active Payload: Saving Mode
+              Weekday mode · building your weekend fund
             </>
           ) : (
             <>
               <Rocket className="w-3 h-3" />
-              Mission Status: Adventure Mode
+              Weekend mode · time to enjoy
             </>
           )}
         </motion.div>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-4xl md:text-6xl font-serif italic text-white tracking-tight">
-              {isSavingMode ? "The Gathering." : "The Escapade."}
+            <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
+              {isSavingMode ? "Plan the weekend you need." : "Enjoy the weekend you planned."}
             </h1>
-            <p className="text-white/40 font-medium">Welcome back, {userProfile.name}. Personnel cleared for access.</p>
+            <p className="text-sm text-slate-500">
+              Welcome back, {userProfile.name}. Here’s how your time and budget are shaping up.
+            </p>
           </div>
           {isSavingMode && (
             <div className="flex flex-col items-end">
-              <p className="text-[10px] uppercase font-bold tracking-[0.4em] text-white/40 mb-2">Next Departure In</p>
+              <p className="text-[10px] uppercase font-semibold tracking-[0.25em] text-slate-400 mb-2">
+                Next weekend in
+              </p>
               <CountdownTimer targetDate={nextFriday} />
             </div>
           )}
@@ -258,6 +304,50 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Primary Column */}
         <div className="md:col-span-8 space-y-8">
+          {/* Weekend snapshot */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="glass">
+              <CardContent className="p-4 space-y-2">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+                  Available hours
+                </p>
+                <p className="text-2xl font-semibold text-slate-900">
+                  {availableHours.toFixed(0)}h
+                </p>
+                <p className="text-xs text-slate-500">
+                  Based on your current plans, you still have room to breathe.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="glass">
+              <CardContent className="p-4 space-y-2">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+                  Weekend completion
+                </p>
+                <div className="flex items-baseline justify-between">
+                  <p className="text-2xl font-semibold text-slate-900">
+                    {weekendSummary.completionRate.toFixed(0)}%
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {weekendSummary.completedActivities}/{weekendSummary.totalActivities} done
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="glass">
+              <CardContent className="p-4 space-y-2">
+                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+                  Planning streak
+                </p>
+                <p className="text-2xl font-semibold text-slate-900">
+                  {engagementSummary.planningStreak}
+                </p>
+                <p className="text-xs text-slate-500">
+                  weekends in a row with at least one plan.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
           {isSavingMode ? (
             /* Discovery Showcase */
             <div className="space-y-6">
@@ -322,14 +412,14 @@ export default function Dashboard() {
             /* Adventure Mode Core UI */
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-serif italic text-white">The Flight Plan</h2>
-                <Link href="/planner" className="text-xs font-bold text-primary flex items-center gap-2 group">
-                  MANAGE ALL <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                <h2 className="text-xl font-semibold text-slate-900">This weekend&apos;s plan</h2>
+                <Link href="/planner" className="text-xs font-semibold text-primary flex items-center gap-2 group">
+                  Open planner <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
               <div className="grid grid-cols-1 gap-4">
                 {activities.length > 0 ? activities.slice(0, 3).map((act) => (
-                  <Card key={act.id} className="glass border-white/5 hover:bg-white/10 transition-all cursor-pointer group">
+                  <Card key={act.id} className="glass hover:bg-slate-50 transition-all cursor-pointer group">
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className={cn(
@@ -343,21 +433,23 @@ export default function Dashboard() {
                           <Calendar className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-white">{act.title}</h4>
-                          <p className="text-xs text-white/40 font-medium">{act.date} • {act.startTime}</p>
+                          <h4 className="font-semibold text-slate-900">{act.title}</h4>
+                          <p className="text-xs text-slate-500 font-medium">{act.date} • {act.startTime}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="border-white/10 text-[10px] text-white/40 uppercase font-bold tracking-widest">{act.category}</Badge>
+                      <Badge variant="outline" className="border-slate-200 text-[10px] text-slate-500 uppercase font-semibold tracking-wide">
+                        {act.category}
+                      </Badge>
                     </CardContent>
                   </Card>
                 )) : (
-                  <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/20">
+                  <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
                       <Compass className="w-6 h-6" />
                     </div>
-                    <p className="text-sm text-white/40">No activities scheduled yet.</p>
-                    <Button size="sm" variant="outline" className="border-white/10 hover:bg-white/5">
-                      Draft Flight Plan
+                    <p className="text-sm text-slate-500">No activities scheduled yet.</p>
+                    <Button size="sm" variant="outline" className="border-slate-200 hover:bg-slate-50">
+                      Start a simple plan
                     </Button>
                   </div>
                 )}
@@ -372,22 +464,26 @@ export default function Dashboard() {
             {/* Trending Section */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-serif italic text-white underline decoration-emerald-500/30 underline-offset-8">Trending Expeditions</h2>
-                <div className="text-[10px] font-bold text-emerald-400 flex items-center gap-2 tracking-widest uppercase">
-                  <Zap className="w-3 h-3" /> High Interaction
+                <h2 className="text-xl font-semibold text-slate-900 underline decoration-emerald-300/60 underline-offset-8">
+                  Ideas other people love
+                </h2>
+                <div className="text-[10px] font-medium text-emerald-500 flex items-center gap-2 tracking-wide uppercase">
+                  <Zap className="w-3 h-3" /> Popular right now
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {trendingEvents.map((event) => (
-                  <Card key={event.id} className="glass border-white/5 hover:border-emerald-500/20 transition-all overflow-hidden relative group">
+                  <Card key={event.id} className="glass hover:border-emerald-300/40 transition-all overflow-hidden relative group">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex justify-between items-center">
                         <div className="text-xl">{event.icon}</div>
-                        <div className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{event.category}</div>
+                        <div className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">
+                          {event.category}
+                        </div>
                       </div>
                       <h4 className="font-bold text-white text-sm leading-tight line-clamp-1">{event.title}</h4>
-                      <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                        <div className="text-sm font-bold text-white/60">${event.cost}</div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                        <div className="text-sm font-semibold text-slate-700">${event.cost}</div>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -402,9 +498,9 @@ export default function Dashboard() {
                             location: event.location
                           })}
                           className={cn(
-                            "h-7 px-3 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all",
+                            "h-7 px-3 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-all",
                             event.isInitialized
-                              ? "text-emerald-400 bg-emerald-400/10"
+                              ? "text-emerald-500 bg-emerald-50"
                               : "text-primary hover:bg-primary/10"
                           )}
                         >
@@ -421,27 +517,70 @@ export default function Dashboard() {
 
         {/* Sidebar Column (Quick Actions / Stats) */}
         <div className="md:col-span-4 space-y-8">
+          <section className="space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Smart suggestions
+            </h3>
+            <Card className="glass">
+              <CardContent className="p-4 space-y-3">
+                {smartSuggestions.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    As you add preferences, activities, and a savings goal, this panel will start
+                    suggesting weekends that fit your life.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {smartSuggestions.slice(0, 3).map((item) => (
+                      <li key={item.id} className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {item.title}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            {item.location} · ${item.cost}
+                          </p>
+                          <p className="text-[11px] text-slate-400">
+                            {item.reason}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </section>
           {isSavingMode && (
-            <section className="space-y-6">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Escapade Fund</h3>
-              <Card className="glass border-primary/20 bg-primary/5 overflow-hidden">
+            <section className="space-y-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Escapade fund
+              </h3>
+              <Card className="glass border-primary/10 bg-primary/5 overflow-hidden">
                 <CardContent className="p-6 space-y-6">
                   <div className="flex justify-between items-end">
                     <div className="space-y-1">
-                      <div className="text-[10px] uppercase font-bold tracking-widest text-primary">Target Remaining</div>
-                      <div className="text-3xl font-bold font-mono text-white">${savingsRemaining.toFixed(0)}</div>
+                      <div className="text-[10px] uppercase font-semibold tracking-wide text-primary">
+                        Remaining this week
+                      </div>
+                      <div className="text-3xl font-semibold font-mono text-slate-900">
+                        ${savingsRemaining.toFixed(0)}
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] uppercase font-bold tracking-widest text-white/40">Goal</div>
-                      <div className="text-lg font-bold text-white">${weeklySavingsGoal.toFixed(0)}</div>
+                      <div className="text-[10px] uppercase font-semibold tracking-wide text-slate-400">
+                        Weekly goal
+                      </div>
+                      <div className="text-lg font-semibold text-slate-800">
+                        ${weeklySavingsGoal.toFixed(0)}
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-widest text-white/40">
+                    <div className="flex justify-between text-[9px] font-medium uppercase tracking-wide text-slate-500">
                       <span>Progress</span>
                       <span>{savingsProgress.toFixed(0)}%</span>
                     </div>
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-white rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${savingsProgress}%` }}
@@ -450,7 +589,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <Link href="/budget">
-                    <Button variant="ghost" size="sm" className="w-full mt-2 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 h-8">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 text-[10px] font-medium uppercase tracking-wide text-slate-600 hover:text-slate-900 hover:bg-white h-8"
+                    >
                       Manage Budget <ArrowRight className="w-3 h-3 ml-2" />
                     </Button>
                   </Link>
@@ -460,27 +603,33 @@ export default function Dashboard() {
           )}
 
           <section className="space-y-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Logistics Control</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Quick actions
+            </h3>
             <div className="grid grid-cols-1 gap-3">
               <Link href="/budget">
-                <Button className="w-full justify-start bg-white/5 border border-white/5 hover:bg-white/10 text-white h-14 rounded-2xl gap-4 group">
-                  <div className="w-8 h-8 rounded-lg bg-orange-400/20 flex items-center justify-center text-orange-400 group-hover:scale-110 transition-transform">
+                <Button className="w-full justify-start bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 h-14 rounded-2xl gap-4 group">
+                  <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
                     <Plus className="w-4 h-4" />
                   </div>
                   <div className="text-left">
                     <div className="text-xs font-bold">New Expense</div>
-                    <div className="text-[10px] text-white/40 uppercase tracking-widest">Update Intelligence</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wide">
+                      Capture something you spent
+                    </div>
                   </div>
                 </Button>
               </Link>
               <Link href="/planner">
-                <Button className="w-full justify-start bg-white/5 border border-white/5 hover:bg-white/10 text-white h-14 rounded-2xl gap-4 group">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                <Button className="w-full justify-start bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 h-14 rounded-2xl gap-4 group">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                     <Plus className="w-4 h-4" />
                   </div>
                   <div className="text-left">
-                    <div className="text-xs font-bold">Schedule Mission</div>
-                    <div className="text-[10px] text-white/40 uppercase tracking-widest">Draft Flight Plan</div>
+                    <div className="text-xs font-bold">Add an activity</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wide">
+                      Block time for something that matters
+                    </div>
                   </div>
                 </Button>
               </Link>
@@ -488,13 +637,17 @@ export default function Dashboard() {
           </section>
 
           <section className="space-y-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-white/40">Recent Internal Logs</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              A little reflection
+            </h3>
             <div className="space-y-3">
-              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl space-y-2">
-                <div className="text-xs font-bold text-white italic line-clamp-2 underline decoration-primary/50 underline-offset-4">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <div className="text-xs font-medium text-slate-700 italic line-clamp-2">
                   "Ready to recharge this weekend. Need to focus on nature..."
                 </div>
-                <div className="text-[10px] text-white/30 uppercase font-bold">Log Entry • 2h ago</div>
+                <div className="text-[10px] text-slate-400 uppercase font-medium">
+                  Example journal note • you can add your own from the planner
+                </div>
               </div>
             </div>
           </section>

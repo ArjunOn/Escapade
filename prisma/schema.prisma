@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  weekends  Weekend[]
+  activities Activity[]
+  budgetLogs BudgetLog[]
+  engagement EngagementMetric[]
+  aiLogs     AiLog[]
+}
+
+model Weekend {
+  id           String   @id @default(cuid())
+  userId       String
+  startDate    DateTime
+  endDate      DateTime
+  title        String?
+  totalSpent   Int      @default(0)
+  budgetTarget Int      @default(0)
+  score        Int      @default(0)
+
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id])
+  planned      PlannedActivity[]
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  category    String
+  baseCost    Int      @default(0)
+
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  planned     PlannedActivity[]
+}
+
+model PlannedActivity {
+  id          String   @id @default(cuid())
+  weekendId   String
+  activityId  String
+  date        DateTime
+  startTime   String
+  durationMin Int
+  cost        Int
+  completed   Boolean  @default(false)
+  rating      Int?
+
+  weekend     Weekend  @relation(fields: [weekendId], references: [id])
+  activity    Activity @relation(fields: [activityId], references: [id])
+}
+
+model BudgetLog {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  category  String
+  direction String   // 'spend' or 'add'
+  note      String?
+  occurredAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model EngagementMetric {
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime @default(now())
+  loginCount     Int      @default(0)
+  planningCount  Int      @default(0)
+  sessionMinutes Int      @default(0)
+  completionRate Float    @default(0)
+
+  user           User     @relation(fields: [userId], references: [id])
+}
+
+model AiLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  prompt    String
+  response  String
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+@@index([userId])
+@@index([startDate])
+@@index([category])
+

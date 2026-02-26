@@ -1,27 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Escapade | Mission Control",
-  description: "Your personalized weekend adventure planner.",
+  title: "Escapade · Weekend Companion",
+  description: "A lifestyle planner that blends weekend time, budget, and habits into one calm companion.",
 };
 
 export default function RootLayout({
@@ -30,20 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
         suppressHydrationWarning={true}
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} antialiased min-h-screen text-foreground relative overflow-x-hidden`}
+        className={`${inter.variable} antialiased min-h-screen bg-background text-foreground relative overflow-x-hidden`}
       >
-        {/* Background Atmosphere */}
-        <div className="radial-glow" />
-        <div className="starfield" />
-
         <RouteGuard>
-          {/* Navigation is currently handled by Navbar which I'll overhaul next */}
           <Navbar />
 
-          <main className="container mx-auto px-4 py-4 pt-24 md:py-8 md:pt-32 max-w-5xl relative z-10 pb-24 md:pb-8 lg:pl-0">
+          <main className="container mx-auto px-4 py-4 pt-20 md:py-8 md:pt-24 max-w-5xl relative z-10 pb-24 md:pb-8 lg:pl-0">
             {children}
           </main>
         </RouteGuard>

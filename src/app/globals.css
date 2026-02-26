@@ -1,101 +1,75 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Roboto Mono, Menlo, Monaco, Consolas, libレーションモーノ, DejaVu Sans Mono, monospace;
-  --font-playfair: var(--font-playfair), serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
 
-  --color-background: oklch(0.12 0.02 250);
-  --color-foreground: oklch(0.98 0 0);
+  --color-background: #f9fafb;
+  --color-foreground: #475569;
 
-  --color-card: oklch(0.15 0.02 250 / 0.8);
-  --color-card-foreground: oklch(0.98 0 0);
+  --color-card: #ffffff;
+  --color-card-foreground: #475569;
 
-  --color-popover: oklch(0.12 0.02 250);
-  --color-popover-foreground: oklch(0.98 0 0);
+  --color-popover: #ffffff;
+  --color-popover-foreground: #475569;
 
-  --color-primary: oklch(0.6 0.25 280);
-  --color-primary-foreground: oklch(0.98 0 0);
+  --color-primary: #3aafa9;
+  --color-primary-foreground: #ffffff;
 
-  --color-secondary: oklch(0.2 0.02 250);
-  --color-secondary-foreground: oklch(0.98 0 0);
+  --color-secondary: #e2e8f0;
+  --color-secondary-foreground: #475569;
 
-  --color-muted: oklch(0.2 0.02 250);
-  --color-muted-foreground: oklch(0.6 0.02 250);
+  --color-muted: #e5e7eb;
+  --color-muted-foreground: #6b7280;
 
-  --color-accent: oklch(0.6 0.25 280 / 0.1);
-  --color-accent-foreground: oklch(0.98 0 0);
+  --color-accent: #ff6f61;
+  --color-accent-foreground: #ffffff;
 
-  --color-destructive: oklch(0.5 0.2 25);
-  --color-destructive-foreground: oklch(0.98 0 0);
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
 
-  --color-border: oklch(0.25 0.02 250);
-  --color-input: oklch(0.25 0.02 250);
-  --color-ring: oklch(0.6 0.25 280);
+  --color-border: #e5e7eb;
+  --color-input: #e5e7eb;
+  --color-ring: #3aafa9;
 
-  /* Icon Color Palette (Master Rebuild) */
   --relaxation: #60a5fa;
-  /* Blue */
-  --social: #34d399;
-  /* Green */
+  --social: #22c55e;
   --outdoor: #facc15;
-  /* Yellow */
-  --sports: #f87171;
-  /* Red */
-  --events: #a78bfa;
-  /* Purple */
+  --sports: #f97373;
+  --events: #a855f7;
   --budget: #fb923c;
-  /* Orange */
-  --traveling: #fb923c;
-  /* Orange */
+  --traveling: #3b82f6;
 }
 
 @layer base {
   * {
-    @apply border-border/40 outline-ring/50;
+    @apply border-border outline-ring/50;
   }
 
   body {
-    @apply text-foreground selection:bg-primary/30 min-h-screen bg-slate-950;
-    /* Fixed Gradient Background */
-    background: linear-gradient(to bottom right, #020617, #0f172a, #000000);
-    background-attachment: fixed;
+    @apply text-foreground selection:bg-primary/20 min-h-screen bg-background;
   }
 
-  h1,
-  h2,
-  h3,
-  .font-serif {
-    font-family: var(--font-playfair), serif;
+  h1 {
+    @apply text-3xl md:text-4xl font-semibold text-slate-800;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold text-slate-800;
+  }
+
+  h3 {
+    @apply text-xl font-semibold text-slate-800;
   }
 }
 
 @layer utilities {
-
-  /* Unified Glassmorphism Component */
   .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
-  }
-
-  /* Subtle Radial Glow for Top-Right */
-  .radial-glow {
-    @apply fixed top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none z-[-1];
-    background: radial-gradient(circle at center, rgba(96, 165, 250, 0.08), transparent 70%);
-  }
-
-  /* Starfield (Optional but kept as ambient layer if desired, or can be removed) */
-  .starfield {
-    @apply fixed inset-0 z-[-2] pointer-events-none opacity-20;
-    background-image:
-      radial-gradient(1px 1px at 20px 30px, #fff, rgba(0, 0, 0, 0)),
-      radial-gradient(1px 1px at 40px 70px, #fff, rgba(0, 0, 0, 0)),
-      radial-gradient(1px 1px at 50px 160px, #fff, rgba(0, 0, 0, 0));
-    background-repeat: repeat;
-    background-size: 200px 200px;
+    @apply bg-white/80 backdrop-blur-xl border border-slate-200 rounded-[20px] shadow-[0_18px_45px_rgba(15,23,42,0.06)];
   }
 
   .text-relaxation {
