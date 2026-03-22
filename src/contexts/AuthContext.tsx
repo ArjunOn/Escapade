@@ -9,8 +9,6 @@ interface AuthContextType extends AuthState {
   signUp: (email: string, password: string, username: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
-  signInWithGoogle: () => Promise<void>
-  signInWithFacebook: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -46,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
       setState({ user, loading: false, error: null })
       if (user?.email) {
-        setAuthUser(user.email, (user.user_metadata as any)?.username || (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name)
+        setAuthUser(user.email, (user.user_metadata as any)?.username || (user.user_metadata as any)?.full_name)
       } else {
         clearStore()
       }
@@ -63,9 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const user = await authService.signUp({ email, password, username })
       setState({ user, loading: false, error: null })
-      if (user?.email) {
-        setAuthUser(user.email, username)
-      }
+      if (user?.email) setAuthUser(user.email, username)
     } catch (error: any) {
       setState(s => ({ ...s, loading: false, error: error.message }))
       throw error
@@ -91,29 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearStore()
   }
 
-  const signInWithGoogle = async () => {
-    setState(s => ({ ...s, loading: true, error: null }))
-    try {
-      await authService.signInWithGoogle()
-      // OAuth redirects the browser — no further action needed here
-    } catch (error: any) {
-      setState(s => ({ ...s, loading: false, error: error.message }))
-      throw error
-    }
-  }
-
-  const signInWithFacebook = async () => {
-    setState(s => ({ ...s, loading: true, error: null }))
-    try {
-      await authService.signInWithFacebook()
-    } catch (error: any) {
-      setState(s => ({ ...s, loading: false, error: error.message }))
-      throw error
-    }
-  }
-
   return (
-    <AuthContext.Provider value={{ ...state, signUp, signIn, signOut, signInWithGoogle, signInWithFacebook }}>
+    <AuthContext.Provider value={{ ...state, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

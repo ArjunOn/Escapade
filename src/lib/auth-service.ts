@@ -8,9 +8,7 @@ export class AuthService {
     const { data, error } = await this.supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { username, full_name: username },
-      },
+      options: { data: { username, full_name: username } },
     })
 
     if (error) {
@@ -44,29 +42,6 @@ export class AuthService {
     }
     if (!data.user) throw new Error('Sign in failed — please try again.')
     return data.user as AuthUser
-  }
-
-  async signInWithGoogle(redirectTo?: string) {
-    const { data, error } = await this.supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectTo || `${window.location.origin}/auth/callback`,
-        queryParams: { access_type: 'offline', prompt: 'select_account' },
-      },
-    })
-    if (error) throw error
-    return data
-  }
-
-  async signInWithFacebook(redirectTo?: string) {
-    const { data, error } = await this.supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: redirectTo || `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) throw error
-    return data
   }
 
   async signOut() {
