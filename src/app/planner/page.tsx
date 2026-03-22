@@ -21,8 +21,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 function getCatColor(cat?: string) { return CATEGORY_COLORS[cat || "Other"] || "#9aa0a6"; }
 
+import { useToast } from "@/components/ui/Toast";
+
 export default function PlannerPage() {
-  const { activities, addActivity, removeActivity, toggleActivity, weeklySavingsGoal, expenses } = useAppStore();
+  const { activities, addActivity, removeActivity, toggleActivity, weeklySavingsGoal, expenses, completeMission } = useAppStore();
+  const { toast } = useToast();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", cost: 0, category: "Events" as Category, location: "" });
@@ -41,6 +44,7 @@ export default function PlannerPage() {
   const submit = () => {
     if (!form.title) return;
     addActivity({ id: Date.now().toString(), ...form, completed: false } as Activity);
+    toast(`"${form.title}" added to your week!`);
     setShowForm(false);
     setForm({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", cost: 0, category: "Events", location: "" });
   };
@@ -65,6 +69,18 @@ export default function PlannerPage() {
           <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 btn-primary text-sm rounded-full px-4 py-2 ml-2">
             <Plus className="w-4 h-4" /> Add Activity
           </button>
+          {activitiesInWeek.length > 0 && (
+            <button
+              onClick={() => {
+                if (confirm("Archive this week and clear activities? This saves to your history.")) {
+                  completeMission();
+                  toast("Week archived to history! 🎉");
+                }
+              }}
+              className="flex items-center gap-1.5 text-sm rounded-full px-4 py-2 ml-1 border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-alt)]">
+              Complete Week
+            </button>
+          )}
         </div>
       </div>
 
@@ -85,6 +101,24 @@ export default function PlannerPage() {
           <p className="text-xs text-[var(--color-text-secondary)]">budget left</p>
         </div>
       </div>
+
+      {/* Completion bar */}
+      {activitiesInWeek.length > 0 && (() => {
+        const done = activitiesInWeek.filter(a => a.completed).length;
+        const pct = Math.round((done / activitiesInWeek.length) * 100);
+        return (
+          <div className="card p-4">
+            <div className="flex justify-between text-xs text-[var(--color-text-secondary)] mb-2">
+              <span>Week completion</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{done}/{activitiesInWeek.length} done · {pct}%</span>
+            </div>
+            <div className="h-2 bg-[var(--color-bg-alt)] rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${pct}%`, background: pct === 100 ? "var(--color-success)" : "var(--color-primary)" }} />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Calendar Grid */}
       <div className="card overflow-hidden">
@@ -134,7 +168,7 @@ export default function PlannerPage() {
                           <button onClick={() => toggleActivity(act.id)} className="p-0.5 bg-white/20 rounded hover:bg-white/40">
                             {act.completed ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
                           </button>
-                          <button onClick={() => removeActivity(act.id)} className="p-0.5 bg-white/20 rounded hover:bg-red-400">
+                          <button onClick={() => { removeActivity(act.id); toast("Activity removed", "info"); }} className="p-0.5 bg-white/20 rounded hover:bg-red-400">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>

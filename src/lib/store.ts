@@ -20,6 +20,7 @@ export const useAppStore = create<AppState>()(
             history: [],
             initializedEventIds: [],
             availabilityWindows: [],
+            savedEventIds: [],
 
             // Authentication Actions
             signup: (profile: UserProfile) => {
@@ -35,6 +36,7 @@ export const useAppStore = create<AppState>()(
                     history: [],
                     initializedEventIds: [],
                     availabilityWindows: [],
+                    savedEventIds: [],
                 };
 
                 set((state) => ({
@@ -59,6 +61,7 @@ export const useAppStore = create<AppState>()(
                         history: user.history || [],
                         initializedEventIds: user.initializedEventIds || [],
                         availabilityWindows: user.availabilityWindows || [],
+                        savedEventIds: user.savedEventIds || [],
                     });
                     return true;
                 }
@@ -76,6 +79,7 @@ export const useAppStore = create<AppState>()(
                     history: [],
                     initializedEventIds: [],
                     availabilityWindows: [],
+                    savedEventIds: [],
                 });
             },
 
@@ -107,6 +111,7 @@ export const useAppStore = create<AppState>()(
                         history: [],
                         initializedEventIds: [],
                         availabilityWindows: [],
+                        savedEventIds: [],
                     };
 
                     set((state) => ({
@@ -127,6 +132,7 @@ export const useAppStore = create<AppState>()(
                     history: existing.history || [],
                     initializedEventIds: existing.initializedEventIds || [],
                     availabilityWindows: existing.availabilityWindows || [],
+                    savedEventIds: existing.savedEventIds || [],
                 });
             },
 
@@ -309,6 +315,7 @@ export const useAppStore = create<AppState>()(
                     history: [],
                     initializedEventIds: [],
                     availabilityWindows: [],
+                    savedEventIds: [],
                 })),
 
             initializeEvent: (event) => {
@@ -470,6 +477,24 @@ export const useAppStore = create<AppState>()(
                         accounts: {
                             ...state.accounts,
                             [email]: { ...state.accounts[email], availabilityWindows: next }
+                        }
+                    };
+                });
+            },
+
+            toggleSavedEvent: (eventId: string) => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+                set((state) => {
+                    const current = state.savedEventIds || [];
+                    const next = current.includes(eventId)
+                        ? current.filter(id => id !== eventId)
+                        : [...current, eventId];
+                    return {
+                        savedEventIds: next,
+                        accounts: {
+                            ...state.accounts,
+                            [email]: { ...state.accounts[email], savedEventIds: next }
                         }
                     };
                 });

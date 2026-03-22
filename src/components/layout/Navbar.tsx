@@ -8,7 +8,7 @@ import { useAppStore } from "@/store";
 import {
   LayoutDashboard, Compass, CalendarDays, Wallet,
   Sparkles, BarChart2, BookOpen, Settings,
-  Menu, X, MapPin, Bell, ChevronDown, DollarSign, Calendar
+  Menu, X, MapPin, Bell, ChevronDown, DollarSign, Calendar, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileModal } from "@/components/features/profile/ProfileModal";
@@ -16,6 +16,7 @@ import { ProfileModal } from "@/components/features/profile/ProfileModal";
 const NAV_ITEMS = [
   { href: "/",          icon: LayoutDashboard, label: "Dashboard" },
   { href: "/discover",  icon: Compass,         label: "Discover"  },
+  { href: "/saved",     icon: Star,            label: "Saved"     },
   { href: "/planner",   icon: CalendarDays,    label: "My Week"   },
   { href: "/calendar",  icon: Calendar,        label: "Calendar"  },
   { href: "/budget",    icon: Wallet,          label: "Budget"    },
@@ -27,7 +28,7 @@ const NAV_ITEMS = [
 export function Navbar() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const { userProfile, weeklySavingsGoal, expenses } = useAppStore();
+  const { userProfile, weeklySavingsGoal, expenses, savedEventIds } = useAppStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -141,7 +142,14 @@ export function Navbar() {
                 onClick={() => setSidebarOpen(false)}
                 className={cn("nav-item", isActive && "active")}
               >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
+                <div className="relative">
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {item.href === "/saved" && savedEventIds.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[var(--color-primary)] text-white text-[8px] flex items-center justify-center font-bold">
+                      {savedEventIds.length > 9 ? "9+" : savedEventIds.length}
+                    </span>
+                  )}
+                </div>
                 <span>{item.label}</span>
               </Link>
             );

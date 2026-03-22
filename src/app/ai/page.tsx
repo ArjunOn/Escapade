@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useAppStore } from "@/store";
-import { Sparkles, Send, Bot, User, RefreshCw, Calendar, DollarSign, Clock } from "lucide-react";
+import { useToast } from "@/components/ui/Toast";
+import { Sparkles, Send, User, RefreshCw, Calendar, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -17,6 +18,7 @@ const STARTER_PROMPTS = [
 
 export default function AIPage() {
   const { userProfile, weeklySavingsGoal, expenses, activities } = useAppStore();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([{
     role: "assistant",
     content: `Hi ${userProfile?.name?.split(" ")[0] || "there"}! 👋 I'm your Escapade AI planner. I know what events are happening near you, your budget, and your interests. Ask me anything — like "Plan my Saturday" or "What can I do with $40 this weekend?"`,
@@ -67,7 +69,8 @@ export default function AIPage() {
         setMessages(m => [...m, { role: "assistant", content: "Hmm, something went wrong. Try again in a moment.", timestamp: new Date() }]);
       }
     } catch {
-      setMessages(m => [...m, { role: "assistant", content: "Connection issue. Make sure the AI provider is configured in your .env.local.", timestamp: new Date() }]);
+      setMessages(m => [...m, { role: "assistant", content: "Connection issue. Make sure the dev server is running and try again.", timestamp: new Date() }]);
+      toast("Could not reach AI — check your connection", "error");
     } finally {
       setLoading(false);
       setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 100);

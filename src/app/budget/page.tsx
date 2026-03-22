@@ -15,8 +15,11 @@ const CAT_COLORS: Record<string, string> = {
 
 const CATEGORIES: Category[] = ["Events","Relaxation","Social","Outdoor","Sports","Traveling","Budget","Other"];
 
+import { useToast } from "@/components/ui/Toast";
+
 export default function BudgetPage() {
   const { expenses, weeklySavingsGoal, setWeeklySavingsGoal, addExpense, removeExpense } = useAppStore();
+  const { toast } = useToast();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState(String(weeklySavingsGoal || 0));
   const [showAdd, setShowAdd] = useState(false);
@@ -36,6 +39,7 @@ export default function BudgetPage() {
     const amt = parseFloat(form.amount);
     if (!amt || amt <= 0) return;
     addExpense({ amount: amt, category: form.category, description: form.description, date: form.date });
+    toast(`$${amt.toFixed(0)} expense added`);
     setShowAdd(false);
     setForm({ amount: "", category: "Events", description: "", date: format(new Date(), "yyyy-MM-dd") });
   };
@@ -134,7 +138,7 @@ export default function BudgetPage() {
                   <p className="text-xs text-[var(--color-text-secondary)]">{exp.category} · {exp.date}</p>
                 </div>
                 <span className="text-sm font-semibold text-[var(--color-error)]">-${exp.amount.toFixed(0)}</span>
-                <button onClick={() => removeExpense(exp.id)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full text-[var(--color-error)] hover:bg-red-50">
+                <button onClick={() => { removeExpense(exp.id); toast("Expense removed", "info"); }} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full text-[var(--color-error)] hover:bg-red-50">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>

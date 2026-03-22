@@ -5,6 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { RouteGuard } from "@/components/layout/RouteGuard";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body suppressHydrationWarning className={`${roboto.variable} antialiased`}>
         <AuthProvider>
+          <ToastProvider>
           <RouteGuard>
             {/* Desktop: sidebar + topbar shell */}
             <div className="app-shell">
@@ -34,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Mobile bottom navigation */}
             <MobileBottomNav />
           </RouteGuard>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

@@ -75,6 +75,7 @@ export interface UserData {
   history: MissionHistory[];
   initializedEventIds: string[];
   availabilityWindows: AvailabilityWindow[];
+  savedEventIds: string[];
 }
 
 export interface AppState {
@@ -120,4 +121,8 @@ export interface AppState {
   setAvailabilityWindows: (windows: AvailabilityWindow[]) => void;
   addAvailabilityWindow: (window: AvailabilityWindow) => void;
   removeAvailabilityWindow: (id: string) => void;
+
+  // Saved events
+  savedEventIds: string[];
+  toggleSavedEvent: (eventId: string) => void;
 }

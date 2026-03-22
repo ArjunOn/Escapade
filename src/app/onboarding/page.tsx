@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/store";
+import { useAuth } from "@/contexts/AuthContext";
 import type { UserProfile } from "@/lib/types";
 import {
   Compass, Check, ArrowRight, ArrowLeft,
@@ -37,7 +38,18 @@ const DETROIT_LOCATION = "Detroit, MI";
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { updateUserProfile } = useAppStore();
+  const { user } = useAuth();
+  const { updateUserProfile, userProfile } = useAppStore();
+
+  // If user already completed onboarding, send them home
+  useEffect(() => {
+    if (userProfile?.onboardingCompleted) router.replace("/");
+  }, [userProfile, router]);
+
+  // If no user at all, send to signup
+  useEffect(() => {
+    if (!user) router.replace("/signup");
+  }, [user, router]);
 
   const [step, setStep] = useState(1);
   const [vibes, setVibes] = useState<string[]>([]);
@@ -56,7 +68,7 @@ export default function OnboardingPage() {
       vibes, budgetTier: budget, preferences: interests,
       location, onboardingCompleted: true,
     });
-    router.push("/");
+    router.replace("/");
   };
 
   const steps = [

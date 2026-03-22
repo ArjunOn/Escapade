@@ -11,6 +11,7 @@ import {
   Sparkles, RefreshCw
 } from "lucide-react";
 import { LoginModal } from "@/components/features/auth/LoginModal";
+import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 import { format, isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 
@@ -170,6 +171,7 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const { userProfile, expenses, weeklySavingsGoal, activities, syncStore, currentUserEmail, availabilityWindows } = useAppStore();
   const router = useRouter();
+  const { toast } = useToast();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [nearbyEvents, setNearbyEvents] = useState<any[]>([]);
   const [scoredEvents, setScoredEvents] = useState<any[]>([]);
@@ -179,8 +181,11 @@ export default function Dashboard() {
   useEffect(() => { if (currentUserEmail) syncStore(); }, [currentUserEmail, syncStore]);
 
   useEffect(() => {
-    if (userProfile && !userProfile.onboardingCompleted) router.push("/onboarding");
-  }, [userProfile, router]);
+    // Only redirect to onboarding once auth is settled and profile is loaded
+    if (!authLoading && user && userProfile && !userProfile.onboardingCompleted) {
+      router.push("/onboarding");
+    }
+  }, [userProfile, router, authLoading, user]);
 
   const fetchNearby = useCallback(async () => {
     setEventsLoading(true);
@@ -189,6 +194,7 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         setNearbyEvents(data.events || []);
+        if (data.events?.length === 0) toast("No events in DB yet — go to Discover and click Sync Events", "info");
       }
     } catch (_) {} finally { setEventsLoading(false); }
   }, []);
@@ -357,12 +363,13 @@ export default function Dashboard() {
           ) : (
             <div className="card p-8 text-center">
               <Compass className="w-8 h-8 text-[var(--color-text-muted)] mx-auto mb-3" />
-              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-                No events loaded yet. Trigger an ingestion to pull real events.
+              <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">No events in the database yet</p>
+              <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                Go to <a href="/discover" className="text-[var(--color-primary)] font-medium underline">Discover</a> and click <strong>Sync Events</strong> to pull real events from Eventbrite and Ticketmaster near you.
               </p>
-              <button onClick={fetchNearby} className="btn-ghost text-sm rounded-full px-4 py-2">
-                Refresh
-              </button>
+              <a href="/discover" className="btn-primary rounded-full px-5 py-2 text-sm inline-flex items-center gap-2">
+                <Compass className="w-4 h-4" /> Go to Discover
+              </a>
             </div>
           )}
         </div>
