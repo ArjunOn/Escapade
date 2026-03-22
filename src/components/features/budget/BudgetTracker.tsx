@@ -1,349 +1,175 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { useAppStore } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-    PieChart, Pie, Cell, ResponsiveContainer,
-    Tooltip, Legend
-} from 'recharts';
-import {
-    Trash2, Edit2, Plus, Wallet,
-    TrendingUp, ArrowDownRight, Tag,
-    Save, X, Check, Rocket, Target
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Category, Expense } from '@/lib/types';
+import { useState, useMemo } from "react";
+import { useAppStore } from "@/store";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Trash2, Edit2, Plus, Save, X, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Category, Expense } from "@/lib/types";
+
+const CAT_COLORS: Record<string, string> = {
+  Events: "#1a73e8", Relaxation: "#60a5fa", Social: "#34d399",
+  Outdoor: "#86efac", Sports: "#f87171", Budget: "#fbbf24",
+  Traveling: "#f97316", Other: "#9aa0a6",
+};
+
+const CATEGORIES: Category[] = [
+  "Events", "Social", "Relaxation", "Outdoor", "Sports", "Traveling", "Budget", "Other"
+];
 
 export function BudgetTracker({ compact = false }: { compact?: boolean }) {
-    const { expenses, weeklySavingsGoal, addExpense, removeExpense, editExpense, setWeeklySavingsGoal, history } = useAppStore();
+  const { expenses, weeklySavingsGoal, addExpense, removeExpense, editExpense, setWeeklySavingsGoal } = useAppStore();
 
-    // Form state
-    const [amount, setAmount] = useState('');
-    const [desc, setDesc] = useState('');
-    const [category, setCategory] = useState<Category>('Social');
+  const [amount, setAmount]     = useState("");
+  const [desc, setDesc]         = useState("");
+  const [category, setCategory] = useState<Category>("Events");
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDesc, setEditDesc]     = useState("");
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [goalInput, setGoalInput]   = useState(String(weeklySavingsGoal || 0));
 
-    // Edit state
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editAmount, setEditAmount] = useState('');
-    const [editDesc, setEditDesc] = useState('');
+  const totalSpent = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
+  const remaining  = Math.max(weeklySavingsGoal - totalSpent, 0);
 
-    // Goal edit state
-    const [isEditingGoal, setIsEditingGoal] = useState(false);
-    const [goalInput, setGoalInput] = useState(weeklySavingsGoal.toString());
+  const chartData = [
+    { name: "Spent",     value: totalSpent, color: "#ea4335" },
+    { name: "Remaining", value: remaining,  color: "#34a853" },
+  ];
 
-    const totalSpent = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
-    const remainingFund = Math.max(weeklySavingsGoal - totalSpent, 0);
+  const handleAdd = () => {
+    const val = parseFloat(amount);
+    if (!isNaN(val) && val > 0) {
+      addExpense({ amount: val, description: desc, category, date: new Date().toISOString() });
+      setAmount(""); setDesc("");
+    }
+  };
 
-    const chartData = [
-        { name: 'Spent', value: totalSpent, color: '#f87171' }, // Red-ish
-        { name: 'Escapade Fund', value: remainingFund, color: '#60a5fa' }, // Blue
-    ];
+  const saveEdit = (id: string) => {
+    const val = parseFloat(editAmount);
+    if (!isNaN(val)) {
+      editExpense(id, { amount: val, description: editDesc });
+      setEditingId(null);
+    }
+  };
 
-    const categoryDataBase = expenses.reduce((acc, exp) => {
-        acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
-        return acc;
-    }, {} as Record<string, number>);
+  const saveGoal = () => {
+    const val = parseFloat(goalInput);
+    if (!isNaN(val) && val >= 0) { setWeeklySavingsGoal(val); setIsEditingGoal(false); }
+  };
 
-    const categoryData = Object.entries(categoryDataBase).map(([name, value]) => ({ name, value }));
-
-    const handleAdd = () => {
-        const val = parseFloat(amount);
-        if (!isNaN(val) && val > 0) {
-            addExpense({
-                amount: val,
-                description: desc,
-                category,
-                date: new Date().toISOString()
-            });
-            setAmount('');
-            setDesc('');
-        }
-    };
-
-    const startEditing = (exp: Expense) => {
-        setEditingId(exp.id);
-        setEditAmount(exp.amount.toString());
-        setEditDesc(exp.description || '');
-    };
-
-    const saveEdit = (id: string) => {
-        const val = parseFloat(editAmount);
-        if (!isNaN(val)) {
-            editExpense(id, { amount: val, description: editDesc });
-            setEditingId(null);
-        }
-    };
-
-    const saveGoal = () => {
-        const val = parseFloat(goalInput);
-        if (!isNaN(val)) {
-            setWeeklySavingsGoal(val);
-            setIsEditingGoal(false);
-        }
-    };
-
-    return (
-        <div className="space-y-8">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <h2 className="text-3xl font-semibold text-slate-900 tracking-tight">Logistics Overview</h2>
-                    <p className="text-slate-600 text-sm font-medium">Tracking intelligence on all financial outbound packages.</p>
-                </div>
-                <div className="flex bg-white border border-slate-200 rounded-2xl p-4 gap-6 items-center">
-                    <div className="text-center group relative cursor-pointer" onClick={() => !isEditingGoal && setIsEditingGoal(true)}>
-                        <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 flex items-center gap-1 justify-center">
-                            Weekly Goal
-                            {!isEditingGoal && <Edit2 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                        </div>
-                        {isEditingGoal ? (
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    type="number"
-                                    value={goalInput}
-                                    onChange={(e) => setGoalInput(e.target.value)}
-                                    className="h-8 w-24 bg-slate-50 border-slate-200 text-slate-900 text-lg font-bold p-1 text-center"
-                                    autoFocus
-                                    onBlur={saveGoal}
-                                    onKeyDown={(e) => e.key === 'Enter' && saveGoal()}
-                                />
-                                <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-400" onClick={saveGoal}>
-                                    <Check className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="text-xl font-bold text-slate-900">${weeklySavingsGoal}</div>
-                        )}
-                    </div>
-                    <div className="w-px bg-slate-200 h-10" />
-                    <div className="text-center">
-                        <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">Spent</div>
-                        <div className="text-xl font-bold text-slate-900">${totalSpent.toFixed(0)}</div>
-                    </div>
-                </div>
-            </header>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Visual Analytics */}
-                <Card className="glass border-slate-200 flex flex-col items-center justify-center min-h-[400px]">
-                    <CardHeader className="w-full text-center pb-0">
-                        <CardTitle className="text-lg font-semibold text-slate-700">Fund Distribution</CardTitle>
-                    </CardHeader>
-                    <CardContent className="w-full h-full p-8 pt-0">
-                        <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={chartData}
-                                        innerRadius={80}
-                                        outerRadius={110}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {chartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px' }}
-                                        itemStyle={{ color: '#0f172a' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="flex justify-center gap-8">
-                            {chartData.map((item) => (
-                                <div key={item.name} className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{item.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Logistics Input */}
-                <Card className="glass border-slate-200">
-                    <CardHeader>
-                        <CardTitle className="text-xl font-semibold text-slate-900">Log New Expense</CardTitle>
-                        <CardDescription className="text-slate-600">Enter outbound logistics details for synchronization.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Amount ($)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    value={amount}
-                                    onChange={e => setAmount(e.target.value)}
-                                    className="bg-slate-50 border-slate-200 text-slate-900"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Classification</Label>
-                                <select
-                                    value={category}
-                                    onChange={e => setCategory(e.target.value as any)}
-                                    className="w-full h-10 rounded-md bg-slate-50 border border-slate-200 text-slate-900 text-xs px-3 outline-none"
-                                >
-                                    {['Social', 'Relaxation', 'Outdoor', 'Sports', 'Events', 'Traveling', 'Other'].map(c => (
-                                        <option key={c} value={c} className="bg-white text-slate-900">{c}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Description</Label>
-                            <Input
-                                placeholder="Package details..."
-                                value={desc}
-                                onChange={e => setDesc(e.target.value)}
-                                className="bg-slate-50 border-slate-200 text-slate-900"
-                            />
-                        </div>
-                        <Button onClick={handleAdd} className="w-full bg-primary hover:bg-primary/90 text-white h-12 rounded-xl uppercase tracking-widest font-bold text-xs mt-4">
-                            <Plus className="w-4 h-4 mr-2" /> Sync Expense
-                        </Button>
-                    </CardContent>
-                </Card>
+  return (
+    <div className="space-y-6">
+      {/* Overview */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Budget Overview</h3>
+          {isEditingGoal ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--color-text-muted)]">$</span>
+              <input type="number" value={goalInput} onChange={e => setGoalInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && saveGoal()}
+                className="w-20 px-2 py-1 border border-[var(--color-primary)] rounded-lg text-sm focus:outline-none"
+                autoFocus />
+              <button onClick={saveGoal} className="p-1 text-[var(--color-success)]"><Check className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setIsEditingGoal(false)} className="p-1 text-[var(--color-text-muted)]"><X className="w-3.5 h-3.5" /></button>
             </div>
-
-            {/* Logistics Ledger */}
-            <Card className="glass border-slate-200 overflow-hidden">
-                <CardHeader className="bg-slate-50 border-b border-slate-200 px-8 flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="text-xl font-semibold text-slate-900">Internal Ledger</CardTitle>
-                        <CardDescription className="text-slate-600">Historical log of all validated financial operations.</CardDescription>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="divide-y divide-slate-200">
-                        <AnimatePresence>
-                            {expenses.length > 0 ? expenses.map((exp) => (
-                                <motion.div
-                                    key={exp.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="p-6 flex items-center justify-between group hover:bg-slate-50 transition-colors"
-                                >
-                                    <div className="flex items-center gap-6">
-                                        <div className={cn(
-                                            "w-10 h-10 rounded-xl flex items-center justify-center",
-                                            exp.category === 'Relaxation' ? 'bg-[#60a5fa]/20 text-[#60a5fa]' :
-                                                exp.category === 'Social' ? 'bg-[#34d399]/20 text-[#34d399]' :
-                                                    exp.category === 'Outdoor' ? 'bg-[#facc15]/20 text-[#facc15]' :
-                                                        exp.category === 'Sports' ? 'bg-[#f87171]/20 text-[#f87171]' :
-                                                            'bg-[#fb923c]/20 text-[#fb923c]'
-                                        )}>
-                                            <Tag className="w-5 h-5" />
-                                        </div>
-                                        {editingId === exp.id ? (
-                                            <div className="flex flex-col gap-2">
-                                                <Input
-                                                    value={editDesc}
-                                                    onChange={e => setEditDesc(e.target.value)}
-                                                    className="bg-slate-50 border-slate-200 text-slate-900 h-8 text-sm"
-                                                />
-                                                <Input
-                                                    type="number"
-                                                    value={editAmount}
-                                                    onChange={e => setEditAmount(e.target.value)}
-                                                    className="bg-slate-50 border-slate-200 text-slate-900 h-8 text-sm w-32"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <div className="font-bold text-slate-900 group-hover:text-primary transition-colors">{exp.description || 'Logistics Package'}</div>
-                                                <div className="text-xs text-slate-500 uppercase font-bold tracking-widest">{exp.category} • {new Date(exp.date).toLocaleDateString()}</div>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-6">
-                                        <div className="text-xl font-bold text-slate-900">${exp.amount}</div>
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {editingId === exp.id ? (
-                                                <>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10" onClick={() => saveEdit(exp.id)}>
-                                                        <Save className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100" onClick={() => setEditingId(null)}>
-                                                        <X className="w-4 h-4" />
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-700 hover:bg-slate-100" onClick={() => startEditing(exp)}>
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400/60 hover:text-red-400 hover:bg-red-400/10" onClick={() => removeExpense(exp.id)}>
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )) : (
-                                <div className="p-12 text-center text-slate-400 italic">No historical ledger found. Synchronize logistics to populate records.</div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </CardContent>
-            </Card>
-            {/* Mission History */}
-            {history && history.length > 0 && (
-                <div className="space-y-6 pt-12 border-t border-slate-200">
-                    <div className="space-y-1">
-                        <h3 className="text-2xl font-semibold text-slate-900 tracking-tight">Mission Archive</h3>
-                        <p className="text-slate-600 text-sm font-medium">Post-operation analysis of previous deployment windows.</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {history.map((mission) => (
-                            <Card key={mission.id} className="glass border-slate-200 hover:border-primary/20 transition-all group">
-                                <CardHeader className="p-6 pb-2">
-                                    <div className="flex justify-between items-start">
-                                        <CardTitle className="text-lg font-semibold text-slate-900 group-hover:text-primary transition-colors">
-                                            {mission.weekLabel}
-                                        </CardTitle>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                            {new Date(mission.date).getFullYear()}
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="p-6 pt-0 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <div className="text-[8px] uppercase font-bold tracking-widest text-slate-500 mb-1">Total Spent</div>
-                                            <div className="text-xl font-bold text-slate-900">${mission.totalSpent}</div>
-                                        </div>
-                                        <div>
-                                            <div className="text-[8px] uppercase font-bold tracking-widest text-slate-500 mb-1">Savings Goal</div>
-                                            <div className="text-xl font-bold text-slate-900">${mission.savingsGoal}</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4 pt-4 border-t border-slate-200">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                            <Rocket className="w-3 h-3 text-primary" /> {mission.activitiesCount} Missions
-                                        </div>
-                                        <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${mission.totalSpent <= mission.savingsGoal ? 'text-emerald-400' : 'text-red-400'
-                                            }`}>
-                                            <Target className="w-3 h-3" />
-                                            {mission.totalSpent <= mission.savingsGoal ? 'Clearance' : 'Overrun'}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
+          ) : (
+            <button onClick={() => { setGoalInput(String(weeklySavingsGoal)); setIsEditingGoal(true); }}
+              className="flex items-center gap-1 text-sm text-[var(--color-primary)] font-medium">
+              <Edit2 className="w-3 h-3" /> Goal: ${weeklySavingsGoal}
+            </button>
+          )}
         </div>
-    );
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="text-center">
+            <p className="text-2xl font-semibold text-[var(--color-error)]">${totalSpent.toFixed(0)}</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">spent</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-semibold text-[var(--color-success)]">${remaining.toFixed(0)}</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">remaining</p>
+          </div>
+        </div>
+        {weeklySavingsGoal > 0 && (
+          <ResponsiveContainer width="100%" height={140}>
+            <PieChart>
+              <Pie data={chartData} innerRadius={40} outerRadius={60} paddingAngle={4} dataKey="value" stroke="none">
+                {chartData.map((e, i) => <Cell key={i} fill={e.color} />)}
+              </Pie>
+              <Tooltip formatter={(v: number) => [`$${v.toFixed(0)}`, ""]} contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Add expense form */}
+      <div className="card p-4 space-y-3">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Log Expense</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <input type="number" placeholder="Amount ($)" value={amount}
+            onChange={e => setAmount(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]" />
+          <select value={category} onChange={e => setCategory(e.target.value as Category)}
+            className="px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm focus:outline-none">
+            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+          </select>
+        </div>
+        <input placeholder="Description (optional)" value={desc} onChange={e => setDesc(e.target.value)}
+          className="w-full px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]" />
+        <button onClick={handleAdd} className="w-full py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-sm font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-dark)]">
+          <Plus className="w-4 h-4" /> Add Expense
+        </button>
+      </div>
+
+      {/* Expenses list */}
+      {expenses.length > 0 && (
+        <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Transactions</h3>
+          </div>
+          <div className="divide-y divide-[var(--color-border-light)]">
+            {[...expenses].reverse().map(exp => (
+              <div key={exp.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-bg-alt)] group">
+                <div className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: CAT_COLORS[exp.category] || "#9aa0a6" }} />
+                <div className="flex-1 min-w-0">
+                  {editingId === exp.id ? (
+                    <div className="flex gap-2">
+                      <input value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                        className="flex-1 px-2 py-1 border border-[var(--color-border)] rounded text-sm focus:outline-none" />
+                      <input type="number" value={editAmount} onChange={e => setEditAmount(e.target.value)}
+                        className="w-20 px-2 py-1 border border-[var(--color-border)] rounded text-sm focus:outline-none" />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                        {exp.description || exp.category}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">{exp.category} · {exp.date.slice(0, 10)}</p>
+                    </>
+                  )}
+                </div>
+                <span className="text-sm font-semibold text-[var(--color-error)]">-${exp.amount.toFixed(0)}</span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {editingId === exp.id ? (
+                    <>
+                      <button onClick={() => saveEdit(exp.id)} className="p-1 text-[var(--color-success)] hover:bg-green-50 rounded"><Save className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setEditingId(null)} className="p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-alt)] rounded"><X className="w-3.5 h-3.5" /></button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => { setEditingId(exp.id); setEditAmount(String(exp.amount)); setEditDesc(exp.description || ""); }}
+                        className="p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-alt)] rounded"><Edit2 className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => removeExpense(exp.id)} className="p-1 text-[var(--color-error)] hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

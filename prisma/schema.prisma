@@ -3,10 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+// ─── Core User ────────────────────────────────────────────────────────────────
 
 model User {
   id        String   @id @default(cuid())
@@ -15,12 +17,89 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  weekends  Weekend[]
-  activities Activity[]
-  budgetLogs BudgetLog[]
-  engagement EngagementMetric[]
-  aiLogs     AiLog[]
+  // Location for geo-based event search
+  city      String?
+  lat       Float?
+  lng       Float?
+  radiusMi  Int      @default(25)
+
+  weekends     Weekend[]
+  activities   Activity[]
+  budgetLogs   BudgetLog[]
+  engagement   EngagementMetric[]
+  aiLogs       AiLog[]
+  availability UserAvailability[]
+  savedEvents  SavedEvent[]
 }
+
+// ─── User Availability (weekly time blocks) ───────────────────────────────────
+
+model UserAvailability {
+  id         String @id @default(cuid())
+  userId     String
+  dayOfWeek  Int    // 0=Sun, 1=Mon ... 6=Sat
+  startHour  Int    // 0-23
+  endHour    Int    // 0-23
+  label      String? // optional: "Morning free", "After work"
+
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── External Events (ingested from Eventbrite, Ticketmaster, etc.) ──────────
+
+model ExternalEvent {
+  id           String   @id @default(cuid())
+  sourceId     String   // external ID from the source platform
+  sourceName   String   // "eventbrite" | "ticketmaster" | "meetup"
+  title        String
+  description  String?
+  startDateTime DateTime
+  endDateTime   DateTime?
+  cost         Float    @default(0)
+  costMax      Float?   // for ranged pricing
+  currency     String   @default("USD")
+  isVirtual    Boolean  @default(false)
+  isFree       Boolean  @default(false)
+  locationName String?
+  address      String?
+  lat          Float?
+  lng          Float?
+  city         String?
+  state        String?
+  url          String
+  imageUrl     String?
+  category     String?
+  tags         String[]
+  status       String   @default("active") // active | cancelled | sold_out
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  savedBy      SavedEvent[]
+
+  @@unique([sourceId, sourceName])
+  @@index([city])
+  @@index([startDateTime])
+  @@index([isFree])
+}
+
+// ─── User Saved Events ────────────────────────────────────────────────────────
+
+model SavedEvent {
+  id              String        @id @default(cuid())
+  userId          String
+  externalEventId String
+  savedAt         DateTime      @default(now())
+  addedToPlanner  Boolean       @default(false)
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event           ExternalEvent @relation(fields: [externalEventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, externalEventId])
+}
+
+// ─── Weekend Planning ─────────────────────────────────────────────────────────
 
 model Weekend {
   id           String   @id @default(cuid())
@@ -31,7 +110,6 @@ model Weekend {
   totalSpent   Int      @default(0)
   budgetTarget Int      @default(0)
   score        Int      @default(0)
-
   createdAt    DateTime @default(now())
 
   user         User     @relation(fields: [userId], references: [id])
@@ -45,7 +123,6 @@ model Activity {
   description String?
   category    String
   baseCost    Int      @default(0)
-
   createdAt   DateTime @default(now())
 
   user        User     @relation(fields: [userId], references: [id])
@@ -67,17 +144,21 @@ model PlannedActivity {
   activity    Activity @relation(fields: [activityId], references: [id])
 }
 
+// ─── Budget ───────────────────────────────────────────────────────────────────
+
 model BudgetLog {
-  id        String   @id @default(cuid())
-  userId    String
-  amount    Int
-  category  String
-  direction String   // 'spend' or 'add'
-  note      String?
+  id         String   @id @default(cuid())
+  userId     String
+  amount     Int
+  category   String
+  direction  String   // 'spend' or 'add'
+  note       String?
   occurredAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 }
+
+// ─── Engagement & AI ─────────────────────────────────────────────────────────
 
 model EngagementMetric {
   id             String   @id @default(cuid())
@@ -99,8 +180,6 @@ model AiLog {
   createdAt DateTime @default(now())
 
   user      User?    @relation(fields: [userId], references: [id])
-  
+
   @@index([userId])
 }
-
-

@@ -1,134 +1,320 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: var(--font-open-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+/* ─── Escapade Design System ──────────────────────────────────────────────────
+   Inspired by Google Calendar: clean whites, personal color coding, 
+   generous spacing, subtle depth, friendly typography.
+   ──────────────────────────────────────────────────────────────────────────── */
 
-  --radius-lg: 20px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
+:root {
+  /* Brand palette */
+  --color-primary:       #1a73e8;   /* Google Blue */
+  --color-primary-light: #e8f0fe;
+  --color-primary-dark:  #1557b0;
 
-  --color-background: #f8fafc;
-  --color-foreground: #0f172a;
+  /* Category colors (event-coded, like GCal event types) */
+  --color-music:     #e91e63;
+  --color-outdoor:   #2e7d32;
+  --color-sports:    #f57c00;
+  --color-social:    #7b1fa2;
+  --color-food:      #e64a19;
+  --color-arts:      #00838f;
+  --color-wellness:  #388e3c;
+  --color-tech:      #1565c0;
+  --color-family:    #f9a825;
+  --color-other:     #546e7a;
 
-  --color-card: #ffffff;
-  --color-card-foreground: #0f172a;
+  /* Neutrals */
+  --color-surface:      #ffffff;
+  --color-bg:           #f8f9fa;
+  --color-bg-alt:       #f1f3f4;
+  --color-border:       #e0e0e0;
+  --color-border-light: #f1f3f4;
+  --color-text-primary: #202124;
+  --color-text-secondary: #5f6368;
+  --color-text-muted:   #9aa0a6;
 
-  --color-popover: #ffffff;
-  --color-popover-foreground: #0f172a;
+  /* Semantic */
+  --color-success:  #34a853;
+  --color-warning:  #fbbc04;
+  --color-error:    #ea4335;
+  --color-free:     #34a853;
 
-  --color-primary: #3aafa9;
-  --color-primary-foreground: #ffffff;
+  /* Spacing tokens */
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+  --radius-pill: 999px;
 
-  --color-secondary: #e2e8f0;
-  --color-secondary-foreground: #1f2937;
+  /* Elevation */
+  --shadow-xs:  0 1px 2px rgba(60,64,67,.08), 0 1px 3px 1px rgba(60,64,67,.06);
+  --shadow-sm:  0 1px 3px rgba(60,64,67,.12), 0 2px 6px 2px rgba(60,64,67,.08);
+  --shadow-md:  0 2px 6px rgba(60,64,67,.15), 0 1px 2px rgba(60,64,67,.1);
+  --shadow-lg:  0 4px 12px rgba(60,64,67,.15), 0 2px 4px rgba(60,64,67,.08);
+  --shadow-xl:  0 8px 24px rgba(60,64,67,.15), 0 4px 8px rgba(60,64,67,.08);
 
-  --color-muted: #e2e8f0;
-  --color-muted-foreground: #475569;
+  /* Transitions */
+  --transition-fast:   all 0.15s ease;
+  --transition-normal: all 0.25s ease;
+  --transition-slow:   all 0.4s ease;
 
-  --color-accent: #ff6f61;
-  --color-accent-foreground: #ffffff;
-
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #ffffff;
-
-  --color-border: #e2e8f0;
-  --color-input: #e2e8f0;
-  --color-ring: #3aafa9;
-
-  --relaxation: #60a5fa;
-  --social: #22c55e;
-  --outdoor: #facc15;
-  --sports: #f97373;
-  --events: #a855f7;
-  --budget: #fb923c;
-  --traveling: #3b82f6;
+  /* Tailwind compat */
+  --background: var(--color-bg);
+  --foreground: var(--color-text-primary);
+  --primary: var(--color-primary);
+  --primary-foreground: #ffffff;
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-alt);
+  --muted-foreground: var(--color-text-secondary);
+  --border: var(--color-border);
+  --input: var(--color-surface);
+  --ring: var(--color-primary);
+  --radius: var(--radius-md);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+/* ─── Base ───────────────────────────────────────────────────────────────────*/
 
-  body {
-    @apply text-foreground selection:bg-primary/20 min-h-screen bg-background;
-  }
+*, *::before, *::after { box-sizing: border-box; }
 
-  .font-serif {
-    font-family: var(--font-sans);
-  }
-
-  h1 {
-    @apply text-3xl md:text-4xl font-semibold text-slate-900;
-  }
-
-  h2 {
-    @apply text-2xl font-semibold text-slate-900;
-  }
-
-  h3 {
-    @apply text-xl font-semibold text-slate-900;
-  }
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-@layer utilities {
-  .glass {
-    @apply bg-white/95 backdrop-blur-xl border border-slate-200 rounded-[20px] shadow-[0_16px_40px_rgba(15,23,42,0.08)];
-  }
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: 'Google Sans', 'Roboto', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
 
-  .text-relaxation {
-    color: var(--relaxation);
-  }
+/* ─── Typography ─────────────────────────────────────────────────────────────*/
 
-  .text-social {
-    color: var(--social);
-  }
+h1, h2, h3, h4, h5, h6 { font-weight: 500; letter-spacing: -0.01em; }
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.375rem; }
+h3 { font-size: 1.125rem; }
 
-  .text-outdoor {
-    color: var(--outdoor);
-  }
+/* ─── Layout Shell ───────────────────────────────────────────────────────────*/
 
-  .text-sports {
-    color: var(--sports);
-  }
+/* ── App Shell ────────────────────────────────────────────────────────────── */
+/* Top bar spans full width (col 1/-1, row 1)                                 */
+/* Sidebar sits in col 1, row 2                                                */
+/* Main content in col 2, row 2                                                */
 
-  .text-events {
-    color: var(--events);
-  }
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 64px 1fr;
+  min-height: 100vh;
+}
 
-  .text-budget {
-    color: var(--budget);
-  }
+.app-topbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  height: 64px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-xs);
+}
 
-  .text-traveling {
-    color: var(--traveling);
-  }
+.app-sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: 8px 0;
+  overflow-y: auto;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+}
 
-  .bg-relaxation {
-    background-color: var(--relaxation);
-  }
+.app-main {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--color-bg);
+  padding: 24px 32px;
+  overflow-y: auto;
+  min-height: calc(100vh - 64px);
+}
 
-  .bg-social {
-    background-color: var(--social);
-  }
+/* ─── Event Chips (GCal-style category colors) ───────────────────────────────*/
 
-  .bg-outdoor {
-    background-color: var(--outdoor);
-  }
+.event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
 
-  .bg-sports {
-    background-color: var(--sports);
-  }
+.chip-music    { background: #fce4ec; color: var(--color-music);   }
+.chip-outdoor  { background: #e8f5e9; color: var(--color-outdoor); }
+.chip-sports   { background: #fff3e0; color: var(--color-sports);  }
+.chip-social   { background: #f3e5f5; color: var(--color-social);  }
+.chip-food     { background: #fbe9e7; color: var(--color-food);    }
+.chip-arts     { background: #e0f7fa; color: var(--color-arts);    }
+.chip-wellness { background: #e8f5e9; color: var(--color-wellness);}
+.chip-tech     { background: #e3f2fd; color: var(--color-tech);    }
+.chip-family   { background: #fffde7; color: var(--color-family);  }
+.chip-other    { background: #eceff1; color: var(--color-other);   }
+.chip-free     { background: #e6f4ea; color: var(--color-free);    }
 
-  .bg-events {
-    background-color: var(--events);
-  }
+/* ─── Cards ──────────────────────────────────────────────────────────────────*/
 
-  .bg-budget {
-    background-color: var(--budget);
-  }
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition-fast);
+}
 
-  .bg-traveling {
-    background-color: var(--traveling);
+.card:hover       { box-shadow: var(--shadow-md); }
+.card-interactive { cursor: pointer; }
+.card-interactive:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+/* Event card with left color accent */
+.event-card {
+  position: relative;
+  overflow: hidden;
+}
+.event-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--event-color, var(--color-primary));
+  border-radius: 4px 0 0 4px;
+}
+
+/* ─── Navigation ─────────────────────────────────────────────────────────────*/
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  margin-right: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: var(--transition-fast);
+  cursor: pointer;
+}
+
+.nav-item:hover { background: var(--color-bg-alt); color: var(--color-text-primary); }
+.nav-item.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────*/
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+.btn-primary:hover { background: var(--color-primary-dark); box-shadow: var(--shadow-sm); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+.btn-ghost:hover { background: var(--color-primary-light); }
+
+/* ─── Utilities ──────────────────────────────────────────────────────────────*/
+
+.glass {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+
+.page-header {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────*/
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
+
+/* Hide scrollbar utility */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Safe area padding for mobile bottom nav */
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ─── Animations ─────────────────────────────────────────────────────────────*/
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up { animation: fadeUp 0.3s ease forwards; }
+.animate-stagger-1 { animation-delay: 0.05s; }
+.animate-stagger-2 { animation-delay: 0.10s; }
+.animate-stagger-3 { animation-delay: 0.15s; }
+.animate-stagger-4 { animation-delay: 0.20s; }
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────*/
+@media (max-width: 1024px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+  .app-topbar { height: 56px; }
+  .app-sidebar { display: none; }
+  .app-main {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 16px;
+    min-height: calc(100vh - 56px);
   }
 }

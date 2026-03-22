@@ -16,6 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const setAuthUser = useAppStore((state) => state.setAuthUser)
   const clearStore = useAppStore((state) => state.logout)
+
   const [state, setState] = useState<AuthState>({
     user: null,
     loading: true,
@@ -23,49 +24,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
 
   useEffect(() => {
-    // Check active session
+    let mounted = true
+
+    // Initial session check — getUser() already handles stale token cleanup
     authService.getUser().then((user) => {
+      if (!mounted) return
       setState({ user, loading: false, error: null })
       if (user?.email) {
-        setAuthUser(user.email, (user.user_metadata as { username?: string })?.username)
+        setAuthUser(user.email, (user.user_metadata as any)?.username)
       } else {
         clearStore()
       }
+    }).catch(() => {
+      if (!mounted) return
+      setState({ user: null, loading: false, error: null })
+      clearStore()
     })
 
-    // Listen for auth changes
+    // Real-time auth state changes
     const { data: { subscription } } = authService.onAuthStateChange((user) => {
+      if (!mounted) return
       setState({ user, loading: false, error: null })
       if (user?.email) {
-        setAuthUser(user.email, (user.user_metadata as { username?: string })?.username)
+        setAuthUser(user.email, (user.user_metadata as any)?.username)
       } else {
         clearStore()
       }
     })
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const signUp = async (email: string, password: string, username: string) => {
+    setState(s => ({ ...s, loading: true, error: null }))
     try {
-      setState({ ...state, loading: true, error: null })
       const user = await authService.signUp({ email, password, username })
       setState({ user, loading: false, error: null })
     } catch (error: any) {
-      setState({ ...state, loading: false, error: error.message })
+      setState(s => ({ ...s, loading: false, error: error.message }))
       throw error
     }
   }
 
   const signIn = async (email: string, password: string) => {
+    setState(s => ({ ...s, loading: true, error: null }))
     try {
-      setState({ ...state, loading: true, error: null })
       const user = await authService.signIn({ email, password })
       setState({ user, loading: false, error: null })
     } catch (error: any) {
-      setState({ ...state, loading: false, error: error.message })
+      setState(s => ({ ...s, loading: false, error: error.message }))
       throw error
     }
   }
@@ -73,12 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await authService.signOut()
-      setState({ user: null, loading: false, error: null })
-      clearStore()
-    } catch (error: any) {
-      setState({ ...state, error: error.message })
-      throw error
-    }
+    } catch { /* always clear locally */ }
+    setState({ user: null, loading: false, error: null })
+    clearStore()
   }
 
   return (
@@ -90,8 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }

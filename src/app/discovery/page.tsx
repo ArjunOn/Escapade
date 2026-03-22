@@ -1,8 +1,2 @@
-"use client";
-
 import { redirect } from "next/navigation";
-
-export default function LegacyDiscoveryRedirect() {
-  redirect("/discover");
-}
-
+export default function DiscoveryRedirect() { redirect("/discover"); }

@@ -1,27 +1,9 @@
-import { db } from "@/lib/db";
+/**
+ * Analytics Service — client-safe functions only.
+ * Server-side DB operations are handled by API routes.
+ */
 import { Activity, Expense, MissionHistory } from "@/lib/types";
-import {
-  calculateWeekendSummary,
-  calculateEngagementMetrics,
-} from "@/lib/analytics";
-
-export async function trackLogin(userId: string) {
-  await db.engagementMetric.create({
-    data: {
-      userId,
-      loginCount: 1,
-    },
-  });
-}
-
-export async function trackPlanningEvent(userId: string) {
-  await db.engagementMetric.create({
-    data: {
-      userId,
-      planningCount: 1,
-    },
-  });
-}
+import { calculateWeekendSummary, calculateEngagementMetrics } from "@/lib/analytics";
 
 export function getLocalWeekendSummary(params: {
   activities: Activity[];
@@ -36,4 +18,3 @@ export function getLocalEngagementSummary(params: {
 }) {
   return calculateEngagementMetrics(params);
 }
-

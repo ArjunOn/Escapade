@@ -1,127 +1,164 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAppStore } from "@/store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Sparkles, Bot, Wand2 } from "lucide-react";
+import { Sparkles, Send, Bot, User, RefreshCw, Calendar, DollarSign, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
-export default function AiCompanionPage() {
-  const { userProfile, activities, expenses, weeklySavingsGoal, history } = useAppStore();
+interface Message { role: "user" | "assistant"; content: string; timestamp: Date; }
+
+const STARTER_PROMPTS = [
+  "Plan my perfect Saturday with $50",
+  "What free events are happening this weekend?",
+  "I have Sunday afternoon free — what should I do?",
+  "Find me outdoor activities under $30",
+];
+
+export default function AIPage() {
+  const { userProfile, weeklySavingsGoal, expenses, activities } = useAppStore();
+  const [messages, setMessages] = useState<Message[]>([{
+    role: "assistant",
+    content: `Hi ${userProfile?.name?.split(" ")[0] || "there"}! 👋 I'm your Escapade AI planner. I know what events are happening near you, your budget, and your interests. Ask me anything — like "Plan my Saturday" or "What can I do with $40 this weekend?"`,
+    timestamp: new Date(),
+  }]);
   const [input, setInput] = useState("");
-  const [response, setResponse] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const handleAsk = async () => {
-    setIsGenerating(true);
-    setError(null);
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const budgetRemaining = Math.max((weeklySavingsGoal || 0) - totalSpent, 0);
 
-    if (!userProfile) {
-      setError("Complete onboarding to unlock AI planning.");
-      setIsGenerating(false);
-      return;
-    }
+  const send = async (text: string) => {
+    if (!text.trim() || loading) return;
+    const userMsg: Message = { role: "user", content: text, timestamp: new Date() };
+    setMessages(m => [...m, userMsg]);
+    setInput("");
+    setLoading(true);
 
     try {
-      const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-      const response = await fetch("/api/ai/plan-weekend", {
+      // Fetch nearby events for context
+      const evRes = await fetch("/api/events?lat=42.3314&lng=-83.0458&days=14&limit=20");
+      const evData = evRes.ok ? await evRes.json() : { events: [] };
+
+      const res = await fetch("/api/ai/plan-weekend", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          preferences: userProfile.preferences || [],
-          vibes: userProfile.vibes || [],
-          currentActivities: activities,
-          weeklyBudget: weeklySavingsGoal || 0,
+          message: text,
+          preferences: userProfile?.preferences || [],
+          vibes: userProfile?.vibes || [],
+          weeklyBudget: weeklySavingsGoal,
           totalSpent,
-          availableHours: 16,
-          recentHistory: history || [],
-          prompt: input,
+          budgetRemaining,
+          nearbyEvents: evData.events.slice(0, 15).map((e: any) => ({
+            title: e.title, date: e.startDateTime, cost: e.cost,
+            isFree: e.isFree, location: e.locationName, category: e.category, url: e.url,
+          })),
+          currentActivities: activities.map(a => ({ title: a.title, date: a.date, cost: a.cost })),
+          conversationHistory: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 403) {
-          setError(data.message || "Upgrade required.");
-        } else {
-          throw new Error(data.message || "Failed to generate plan");
-        }
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(m => [...m, { role: "assistant", content: data.plan || data.message || "Sorry, I couldn't generate a plan.", timestamp: new Date() }]);
+      } else {
+        setMessages(m => [...m, { role: "assistant", content: "Hmm, something went wrong. Try again in a moment.", timestamp: new Date() }]);
       }
-
-      setResponse(data.plan);
-    } catch (err: any) {
-      setError(err.message || "Failed to generate weekend plan");
+    } catch {
+      setMessages(m => [...m, { role: "assistant", content: "Connection issue. Make sure the AI provider is configured in your .env.local.", timestamp: new Date() }]);
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
+      setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     }
   };
 
   return (
-    <div className="space-y-8 py-4">
-      <div className="space-y-2">
-        <h1 className="text-4xl md:text-5xl font-bold text-slate-900\">AI Companion</h1>
-        <p className="text-sm text-slate-500">
-          Describe your ideal weekend in natural language, and I'll suggest activities and a budget breakdown that fits your vibe.
-        </p>
+    <div className="flex flex-col h-[calc(100vh-120px)] max-w-3xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="page-header">AI Planner</h1>
+          <p className="page-subtitle">Powered by real events near you</p>
+        </div>
+        {/* Context pills */}
+        <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-bg-alt)] text-xs text-[var(--color-text-secondary)]">
+            <DollarSign className="w-3 h-3 text-[var(--color-success)]" /> ${budgetRemaining} left
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--color-bg-alt)] text-xs text-[var(--color-text-secondary)]">
+            <Calendar className="w-3 h-3 text-[var(--color-primary)]" /> {activities.length} activities
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="glass">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Bot className="w-4 h-4 text-primary" />
-              Describe your weekend
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="“Sunset walk, one nice dinner, mostly low-cost, somewhere calm…”"
-              className="min-h-[140px] resize-none"
-            />
-            <Button
-              type="button"
-              onClick={handleAsk}
-              className="inline-flex items-center gap-2"
-              disabled={isGenerating}
-            >
-              <Sparkles className="w-4 h-4" />
-              {isGenerating ? "Planning..." : "Plan my weekend"}
-            </Button>
-            {error && <p className="text-xs text-red-500">{error}</p>}
-            <p className="text-xs text-slate-500">
-              This flow now calls the server-side AI endpoint so you can swap providers without
-              touching the UI.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Wand2 className="w-4 h-4 text-accent" />
-              Companion reply
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="rounded-[16px] bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700 min-h-[120px] whitespace-pre-line">
-              {response ??
-                "Ask for any kind of weekend—budget-friendly, outdoorsy, social, or slow and restorative—and I’ll suggest a gentle starting point."}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+        {messages.map((msg, i) => (
+          <div key={i} className={cn("flex gap-3", msg.role === "user" && "flex-row-reverse")}>
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1",
+              msg.role === "assistant" ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-bg-alt)] text-[var(--color-text-secondary)]"
+            )}>
+              {msg.role === "assistant" ? <Sparkles className="w-4 h-4" /> : <User className="w-4 h-4" />}
             </div>
-            <p className="text-xs text-slate-500">
-              If AI is disabled, you will see a friendly error here until the provider is enabled.
-            </p>
-          </CardContent>
-        </Card>
+            <div className={cn(
+              "max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
+              msg.role === "assistant"
+                ? "bg-white border border-[var(--color-border)] text-[var(--color-text-primary)] rounded-tl-sm"
+                : "bg-[var(--color-primary)] text-white rounded-tr-sm"
+            )}>
+              <p className="whitespace-pre-wrap">{msg.content}</p>
+              <p className={cn("text-[10px] mt-1.5", msg.role === "assistant" ? "text-[var(--color-text-muted)]" : "text-white/60")}>
+                {format(msg.timestamp, "h:mm a")}
+              </p>
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex gap-3">
+            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-white border border-[var(--color-border)] rounded-2xl rounded-tl-sm px-4 py-3">
+              <div className="flex gap-1.5 items-center h-5">
+                {[0,1,2].map(i => <div key={i} className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />)}
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Starter prompts */}
+      {messages.length <= 1 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {STARTER_PROMPTS.map(p => (
+            <button key={p} onClick={() => send(p)}
+              className="px-3 py-1.5 rounded-full border border-[var(--color-primary)] text-[var(--color-primary)] text-xs font-medium hover:bg-[var(--color-primary-light)] transition-colors">
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="flex gap-2 mt-auto pt-3 border-t border-[var(--color-border)]">
+        <input
+          value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }}}
+          placeholder="Ask me to plan your weekend, find events, or check your budget..."
+          className="flex-1 px-4 py-3 rounded-2xl border border-[var(--color-border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] bg-white"
+          disabled={loading}
+        />
+        <button
+          onClick={() => send(input)} disabled={loading || !input.trim()}
+          className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] text-white flex items-center justify-center hover:bg-[var(--color-primary-dark)] transition-colors disabled:opacity-50"
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </button>
       </div>
     </div>
   );
 }
-

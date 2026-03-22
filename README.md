@@ -1,193 +1,171 @@
-## Escapade · Weekend Companion
+# Escapade — Your Weekend Event Companion
 
-Escapade is a lifestyle productivity + budget hybrid for weekends. It helps you:
+> Discover real local events, plan your week, and stay on budget — powered by Eventbrite, Ticketmaster, and AI.
 
-- Plan gentle, realistic weekends
-- See your money and time in one place
-- Discover activities that fit your vibe and budget
-- Track streaks, scores, and habits over time
-- Prepare for a future AI assistant that can co-plan with you
+---
 
-### Vision
+## What It Does
 
-- **Time**: Treat weekends as a limited, precious resource instead of an afterthought.
-- **Money**: Make spending feel intentional and kind rather than restrictive.
-- **Energy**: Balance social, active, and restorative time.
-- **AI-ready**: All key flows are wired through services so an AI layer can plug in later.
+- **Discover** live events from Eventbrite & Ticketmaster near you (Detroit default)
+- **Plan** your week with a Google Calendar-style weekly planner
+- **Budget** — set a weekly goal, log expenses, track spending by category
+- **AI Planner** — chat with an AI that knows your budget, interests, and real nearby events
+- **Journal** — capture moods and memories from your weekends
+- **Insights** — spending charts and activity streaks
 
-## Architecture
-
-- **Next.js App Router** (`src/app`)
-  - `page.tsx` / `dashboard/` – lifestyle dashboard, smart suggestions, streaks, and quick stats
-  - `planner/` – weekend planner
-  - `budget/` – budget tracker and breakdowns
-  - `discover/` – activity discovery with matching
-  - `insights/` – historical trends, averages, diversity, and scores
-  - `ai/` – natural-language AI companion scaffold
-- **Design system**
-  - Inter font, light palette (`#F9FAFB` background, `#3AAFA9` primary, `#FF6F61` accent, `#475569` text)
-  - Card radius `20px`, soft shadows, and glass components in `globals.css`
-- **Domain & state**
-  - `src/lib/types.ts` – core domain models (activities, expenses, weekends, history, user profile)
-  - `src/lib/store.ts` – persisted Zustand store for accounts and active user state
-  - `src/store/index.ts` + `src/types/index.ts` – clean imports for UI layer
-- **Business logic layers**
-  - `src/lib/analytics.ts` – weekend summaries, budget accuracy, diversity scores, engagement metrics
-  - `src/lib/gamification.ts` – weekend score, streaks, and badge logic
-  - `src/lib/recommendation-engine.ts` – rule-based recommendations using budget, hours, and preferences
-  - `src/services/*` – thin service layer (`analytics-service`, `gamification-service`, `recommendation-service`)
-- **Data & persistence**
-  - `prisma/schema.prisma` – Postgres schema for users, weekends, activities, planned_activities, budget_logs, engagement_metrics, ai_logs
-  - `src/lib/db.ts` – Prisma client
+---
 
 ## Tech Stack
 
-- **Framework**: Next.js (App Router, React 19)
-- **Styling**: Tailwind CSS v4 + custom design tokens
-- **UI kit**: Shadcn-style components
-- **State Management**: Zustand (persisted per user)
-- **Charts**: Recharts
-- **Database**: PostgreSQL via Prisma (schema + client included)
+| Layer | Tech |
+|---|---|
+| Framework | Next.js 15 (App Router) |
+| UI | Tailwind CSS v4 + custom design tokens |
+| State | Zustand (persisted) |
+| Auth | Supabase Auth |
+| Database | PostgreSQL via Prisma (hosted on Supabase) |
+| Event APIs | Eventbrite API + Ticketmaster Discovery API |
+| AI | Pluggable: Anthropic Claude / OpenAI / Groq / Ollama / Mock |
 
-## Getting Started
+---
 
-1. **Install dependencies**:
+## Setup
 
-   ```bash
-   npm install
-   ```
+### 1. Install dependencies
 
-2. **Set up the database**:
-
-   ```bash
-   npx prisma migrate dev
-   npx prisma db seed   # optional once you add a seed script
-   ```
-
-   Configure `DATABASE_URL` in `.env` (PostgreSQL).
-
-3. **Run the development server**:
-
-   ```bash
-   npm run dev
-   ```
-
-4. Open `http://localhost:3000` in your browser.
-
-## Behavioral Design
-
-- **Soft constraints**: Progress bars and scores without harsh failure states.
-- **Gentle nudges**: Copy and visuals encourage reflection rather than guilt.
-- **Badges & streaks**: Explorer, Budget Master, and Consistent Planner badges are computed by the gamification layer and surfaced in insights.
-- **Discover → Plan → Reflect loop**: Discover ideas, plan them, track spend, then look back via insights.
-
-## SaaS & Monetization Roadmap
-
-- **Stripe-ready**: App is structured so that subscription checks can be added in the services layer and/or middleware.
-- **Feature gating**:
-  - Good candidates for premium tiers:
-    - Deep insights (`/insights`)
-    - Advanced recommendations and AI companion (`/ai`)
-    - Exporting history and advanced analytics
-- **Role-based access**:
-  - Future `User` model extensions (role field, team/weekend-sharing) can plug into the Prisma schema without breaking existing tables.
-
-## AI Integration Plan
-
-- **Recommendation engine**: Already rule-based and encapsulated in `src/lib/recommendation-engine.ts`.
-- **AI companion**:
-  - `src/app/ai/page.tsx` calls the recommendation engine and is wired so you can replace the mock handler with a real API call.
-  - Add a Next.js route (e.g. `/api/ai/plan-weekend`) that:
-    - Accepts natural language input
-    - Uses the same context (profile, activities, expenses, budget)
-    - Calls OpenAI (or other provider) and shapes results into activity suggestions and budget hints.
-- **Analytics & logs**:
-  - `AiLog` table in Prisma is ready to store prompts/responses for observability and future tuning.
-
-## 🚀 Production Deployment
-
-### Prerequisites
-- Supabase account and project
-- Vercel account
-- GitHub repository
-
-### Environment Variables
-
-Create a `.env.local` file based on `.env.example`:
-
-```env
-# Database (from Supabase)
-DATABASE_URL=postgresql://...
-DIRECT_URL=postgresql://...
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://[project-ref].supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# AI Provider (optional)
-AI_PROVIDER=mock
-OPENAI_API_KEY=your-key-here
+```powershell
+cd A:\Projects\Escapade
+npm install
 ```
 
-### Database Setup
+### 2. Configure environment
 
-1. Create a Supabase project
-2. Get your connection strings from Project Settings → Database
-3. Run migrations:
-```bash
-npx prisma migrate deploy
-```
+`.env.local` is already set up with:
+- Supabase credentials
+- Eventbrite API key (`7TQSLIUJPK4EDS7OQSQC`)
+- Ticketmaster API key (`EZq8nVHk2AjjxyyJDCbuuDr3m1HoWGMU`)
+- Default location: Detroit, MI (lat 42.3314, lng -83.0458)
 
-### Deploying to Vercel
-
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy!
-
-### AI Provider Setup
-
-By default, the app uses a mock AI provider. To enable real AI:
-
-1. Set `AI_PROVIDER` in environment variables
-2. Add the corresponding API key
-3. Supported providers: `openai`, `groq`, `claude`, `gemini`, `ollama`
-
-Example for OpenAI:
+To enable real AI responses, add one of:
 ```env
+AI_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+
+# OR
 AI_PROVIDER=openai
 OPENAI_API_KEY=sk-...
 ```
 
-### Post-Deployment
+### 3. Push DB schema
 
-- Configure redirect URLs in Supabase Auth settings
-- Test authentication flow
-- Monitor logs in Vercel dashboard
-- Check database connections
+```powershell
+# One-time setup — creates all tables including ExternalEvent, UserAvailability etc.
+node scripts/setup.js
+```
 
-## 🔒 Security
+### 4. Start dev server
 
-- All sensitive keys are server-side only
-- API routes are protected with Supabase auth
-- Input validation on all forms
-- Rate limiting implemented
-- HTTPS enforced in production
+```powershell
+npm run dev
+```
 
-## 📊 Monitoring
+Open **http://localhost:3000**
 
-Check these after deployment:
-- `/api/health` - Health check endpoint
-- Vercel Analytics - Performance monitoring
-- Supabase Logs - Database queries
-- Browser Console - Client-side errors
+---
 
-## Deployment (Legacy Note)
+## First Run Walkthrough
 
-The project is a standard Next.js app and can be deployed on platforms like Vercel.  
-Make sure your `DATABASE_URL` and any future Stripe / AI provider keys are configured as environment variables.
+1. **Sign up** at `/signup`
+2. **Complete onboarding** — pick your vibe, budget style, interests, and location
+3. Go to **Discover** → click **Sync Events** button
+   - This calls `POST /api/events/ingest` which pulls real events from Eventbrite + Ticketmaster near Detroit
+   - Events are upserted into your database and cached for 1 hour
+4. Events now appear on **Dashboard** and **Discover**
+5. Click **AI Planner** → try "Plan my Saturday with $50"
 
+---
+
+## Event Sync
+
+### Manual (from UI)
+Click **Sync Events** on the Discover page — triggers ingestion for Detroit area.
+
+### Via API
+```bash
+# Manual POST
+curl -X POST http://localhost:3000/api/events/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"lat":42.3314,"lng":-83.0458,"city":"Detroit","radiusMiles":30,"daysAhead":14}'
+
+# Cron-friendly GET (requires CRON_SECRET from .env.local)
+curl "http://localhost:3000/api/events/ingest?secret=escapade_cron_2026"
+```
+
+### Auto-sync (production)
+Set up a cron job to call the GET endpoint every 2 hours:
+- **Vercel Cron**: add to `vercel.json`
+- **GitHub Actions**: schedule workflow
+- **Any cron service**: call `GET /api/events/ingest?secret=YOUR_SECRET`
+
+---
+
+## Key Files
+
+```
+src/
+├── app/
+│   ├── page.tsx              # Dashboard
+│   ├── discover/page.tsx     # Event discovery + real-time filters
+│   ├── planner/page.tsx      # Weekly calendar planner
+│   ├── budget/page.tsx       # Budget tracker
+│   ├── ai/page.tsx           # AI chat planner
+│   ├── insights/page.tsx     # Charts + stats
+│   ├── journal/page.tsx      # Mood journal
+│   ├── onboarding/page.tsx   # First-run setup
+│   └── api/
+│       ├── events/route.ts         # GET nearby events
+│       └── events/ingest/route.ts  # POST/GET trigger ingestion
+│
+├── services/
+│   ├── eventbrite-service.ts   # Eventbrite API client
+│   ├── ticketmaster-service.ts # Ticketmaster API client
+│   ├── event-ingestion.ts      # Orchestrator (upserts to DB)
+│   ├── recommendation-service.ts # Scores events for user
+│   └── ai-provider.ts          # Multi-provider AI (Claude/OpenAI/etc)
+│
+├── lib/
+│   ├── recommendation-engine.ts # Multi-signal scorer
+│   ├── store.ts                 # Zustand state
+│   └── types.ts                 # Domain types
+│
+└── components/
+    ├── layout/Navbar.tsx           # Top bar + sidebar + budget widget
+    ├── layout/MobileBottomNav.tsx  # Mobile tab bar
+    └── features/profile/ProfileModal.tsx # Settings (profile, schedule, budget)
+```
+
+---
+
+## Adding a New City
+
+Change the default coordinates in `.env.local`:
+
+```env
+NEXT_PUBLIC_DEFAULT_LAT=40.7128
+NEXT_PUBLIC_DEFAULT_LNG=-74.0060
+NEXT_PUBLIC_DEFAULT_CITY=New York
+```
+
+Then trigger a new sync. Events update automatically.
+
+---
+
+## AI Provider Setup
+
+| Provider | Env Var | AI_PROVIDER value |
+|---|---|---|
+| Anthropic Claude | `ANTHROPIC_API_KEY` | `anthropic` |
+| OpenAI | `OPENAI_API_KEY` | `openai` |
+| Groq | `GROQ_API_KEY` | `groq` |
+| Ollama (local) | `OLLAMA_BASE_URL` | `ollama` |
+| Mock (no key needed) | — | `mock` |

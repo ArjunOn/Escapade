@@ -233,8 +233,8 @@ Respond in a friendly, conversational tone with specific, actionable suggestions
 
 About me:
 - Name: ${context.userName}
-- Preferences: ${context.preferences.join(', ')}
-- Mood/Vibes: ${context.vibes.join(', ')}
+- Preferences: ${context.preferences.join(', ') || 'open to anything'}
+- Mood/Vibes: ${context.vibes.join(', ') || 'relaxed'}
 
 Current situation:
 - Weekly budget: $${context.weeklyBudget}
@@ -242,15 +242,15 @@ Current situation:
 - Remaining budget: $${context.weeklyBudget - context.totalSpentThisWeek}
 - Available time: ~${context.availableHours} hours
 
-${context.currentWeekendActivities.length > 0 ? `
-Already planned this weekend:
-${context.currentWeekendActivities.map(a => `- ${a.title} (${a.category})`).join('\n')}
-` : 'Nothing planned yet!'}
+${context.currentWeekendActivities.length > 0 ? `Already planned this weekend:\n${context.currentWeekendActivities.map(a => `- ${a.title} (${a.category})`).join('\n')}` : 'Nothing planned yet!'}
 
-${context.recentHistory.length > 0 ? `
-Recently enjoyed:
-${context.recentHistory.slice(0, 3).map(h => `- ${h.activity}`).join('\n')}
-` : ''}
+${context.nearbyEvents && context.nearbyEvents.length > 0 ? `
+Real events happening nearby this weekend:
+${context.nearbyEvents.slice(0, 12).map(e =>
+  `- ${e.title} | ${e.isFree ? 'Free' : `$${e.cost}`} | ${e.location || 'Online'} | ${new Date(e.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric' })}`
+).join('\n')}
+
+Please build the plan using these real events where they fit. Reference them by name.` : ''}
 
 Please suggest a weekend plan that fits my style and budget. Include specific activities, timing, and estimated costs.`
 

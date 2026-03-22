@@ -31,4 +31,13 @@ export interface WeekendContext {
   totalSpentThisWeek: number
   availableHours: number
   recentHistory: any[]
+  nearbyEvents?: Array<{
+    title: string
+    date: string
+    cost: number
+    isFree: boolean
+    location: string | null
+    category: string | null
+    url: string
+  }>
 }

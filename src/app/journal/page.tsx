@@ -1,144 +1,215 @@
 "use client";
 
-import { useState } from 'react';
-import { useAppStore } from '@/lib/store';
-import { JournalEntry } from '@/lib/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useMemo } from "react";
+import { useAppStore } from "@/store";
+import { JournalEntry } from "@/lib/types";
 import {
-    BookOpen, Sparkles, Calendar as CalendarIcon,
-    Smile, Meh, Frown, Rocket, MessageSquare,
-    Zap, Heart
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+  BookOpen, Plus, Smile, Meh, Frown, Zap, Heart,
+  Calendar, Tag, Trash2, X
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+
+const MOODS: { value: JournalEntry["mood"]; icon: React.ElementType; color: string; label: string }[] = [
+  { value: "Happy",   icon: Smile,  color: "#34a853", label: "Happy"   },
+  { value: "Excited", icon: Zap,    color: "#fbbc04", label: "Excited" },
+  { value: "Neutral", icon: Meh,    color: "#1a73e8", label: "Neutral" },
+  { value: "Tired",   icon: Heart,  color: "#7b1fa2", label: "Tired"   },
+  { value: "Sad",     icon: Frown,  color: "#ea4335", label: "Sad"     },
+];
+
+const MOOD_BG: Record<string, string> = {
+  Happy: "#e6f4ea", Excited: "#fef9e5", Neutral: "#e8f0fe",
+  Tired: "#f3e5f5", Sad: "#fce8e6",
+};
+
+function MoodPill({ mood }: { mood: JournalEntry["mood"] }) {
+  const m = MOODS.find(x => x.value === mood);
+  if (!m) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium"
+      style={{ background: MOOD_BG[mood] || "#f1f3f4", color: m.color }}>
+      <m.icon className="w-3 h-3" />
+      {m.label}
+    </span>
+  );
+}
 
 export default function JournalPage() {
-    const { journalEntries, addJournalEntry } = useAppStore();
-    const [text, setText] = useState('');
-    const [mood, setMood] = useState<JournalEntry['mood']>('Neutral');
+  const { journalEntries, addJournalEntry } = useAppStore();
+  const [showForm, setShowForm] = useState(false);
+  const [mood, setMood] = useState<JournalEntry["mood"]>("Neutral");
+  const [text, setText] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
-    const handleSubmit = () => {
-        if (!text.trim()) return;
-        const newEntry: JournalEntry = {
-            id: crypto.randomUUID(),
-            date: new Date().toISOString(),
-            text,
-            mood,
-            tags: [],
-        };
-        addJournalEntry(newEntry);
-        setText('');
-    };
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (t && !tags.includes(t)) setTags(p => [...p, t]);
+    setTagInput("");
+  };
 
-    const getMoodIcon = (m: JournalEntry['mood']) => {
-        switch (m) {
-            case 'Happy': return <Smile className="w-5 h-5 text-emerald-400" />;
-            case 'Excited': return <Zap className="w-5 h-5 text-yellow-400" />;
-            case 'Neutral': return <Meh className="w-5 h-5 text-blue-400" />;
-            case 'Sad': return <Frown className="w-5 h-5 text-red-400" />;
-            case 'Tired': return <Heart className="w-5 h-5 text-primary" />;
-        }
-    };
+  const submit = () => {
+    if (!text.trim()) return;
+    addJournalEntry({
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      text: text.trim(),
+      mood,
+      tags,
+    });
+    setText(""); setTags([]); setTagInput("");
+    setShowForm(false);
+  };
 
-    return (
-        <div className="space-y-12 py-6">
-            <header className="space-y-4">
-                <div className="flex items-center gap-2 text-[#a78bfa]">
-                    <BookOpen className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Temporal reflection</span>
-                </div>
-                <h1 className="text-4xl md:text-6xl font-semibold text-slate-900 tracking-tight">Internal Log</h1>
-                <p className="text-slate-600 font-medium">Capturing neural signals and gratitude for the escape.</p>
-            </header>
+  const byMonth = useMemo(() => {
+    const map: Record<string, JournalEntry[]> = {};
+    for (const e of [...journalEntries].reverse()) {
+      const key = format(parseISO(e.date), "MMMM yyyy");
+      if (!map[key]) map[key] = [];
+      map[key].push(e);
+    }
+    return map;
+  }, [journalEntries]);
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Input Column */}
-                <div className="lg:col-span-12">
-                    <Card className="glass border-slate-200 overflow-hidden">
-                        <CardHeader className="p-8 border-b border-slate-200 bg-slate-50">
-                            <CardTitle className="text-2xl font-semibold text-slate-900">New Submission</CardTitle>
-                            <CardDescription className="text-slate-600">Gratitude for the Escape: What defined your journey today?</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 space-y-8">
-                            <div className="flex flex-wrap justify-center gap-3">
-                                {(['Happy', 'Excited', 'Neutral', 'Sad', 'Tired'] as const).map(m => (
-                                    <Button
-                                        key={m}
-                                        variant="ghost"
-                                        onClick={() => setMood(m)}
-                                        className={cn(
-                                            "flex flex-col h-auto py-4 px-6 gap-2 rounded-2xl border transition-all min-w-[100px]",
-                                            mood === m
-                                                ? "bg-primary/10 border-primary text-slate-900 shadow-sm"
-                                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
-                                        )}
-                                    >
-                                        {getMoodIcon(m)}
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">{m}</span>
-                                    </Button>
-                                ))}
-                            </div>
-
-                            <div className="relative">
-                                <Textarea
-                                    placeholder="Begin neural uplink..."
-                                    className="min-h-[200px] bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-2xl p-6 text-lg focus-visible:ring-primary/50"
-                                    value={text}
-                                    onChange={(e) => setText(e.target.value)}
-                                />
-                                <div className="absolute top-4 right-4 text-slate-200 pointer-events-none">
-                                    <MessageSquare className="w-12 h-12" />
-                                </div>
-                            </div>
-
-                            <Button onClick={handleSubmit} className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold uppercase tracking-[0.2em] text-xs shadow-sm">
-                                <Rocket className="w-4 h-4 mr-3" /> Record Entry
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Historical Log Column */}
-                <div className="lg:col-span-12 space-y-6">
-                    <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-slate-400 ml-2">Historical Records</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <AnimatePresence>
-                            {journalEntries.length > 0 ? journalEntries.map(entry => (
-                                <motion.div
-                                    key={entry.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="group"
-                                >
-                                    <Card className="glass border-slate-200 hover:border-primary/30 transition-all h-full flex flex-col">
-                                        <CardHeader className="pb-4 flex flex-row items-center justify-between border-b border-slate-200">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200">
-                                                    {getMoodIcon(entry.mood)}
-                                                </div>
-                                                <div>
-                                                    <CardTitle className="text-sm font-semibold text-slate-900">Log Entry</CardTitle>
-                                                    <CardDescription className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 text-slate-500">
-                                                        <CalendarIcon className="w-2.5 h-2.5" /> {new Date(entry.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                                                    </CardDescription>
-                                                </div>
-                                            </div>
-                                            {(entry.mood === 'Happy' || entry.mood === 'Excited') && <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />}
-                                        </CardHeader>
-                                        <CardContent className="pt-6 flex-1">
-                                            <p className="text-sm leading-relaxed text-slate-600">"{entry.text}"</p>
-                                        </CardContent>
-                                    </Card>
-                                </motion.div>
-                            )) : (
-                                <div className="col-span-full py-20 text-center text-slate-400 italic">No historical records synchronized.</div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="space-y-5 max-w-3xl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-header">Journal</h1>
+          <p className="page-subtitle">Capture moments, moods, and memories</p>
         </div>
-    );
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 btn-primary rounded-full px-4 py-2 text-sm">
+          <Plus className="w-4 h-4" /> New Entry
+        </button>
+      </div>
+
+      {/* Empty state */}
+      {journalEntries.length === 0 && !showForm && (
+        <div className="card p-12 text-center">
+          <BookOpen className="w-10 h-10 text-[var(--color-text-muted)] mx-auto mb-3" />
+          <h3 className="text-base font-medium text-[var(--color-text-primary)] mb-1">
+            Your journal is empty
+          </h3>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+            Start capturing how you feel about your weekends and adventures.
+          </p>
+          <button onClick={() => setShowForm(true)} className="btn-ghost rounded-full px-4 py-2 text-sm border border-[var(--color-border)]">
+            Write first entry
+          </button>
+        </div>
+      )}
+
+      {/* Entries grouped by month */}
+      {Object.entries(byMonth).map(([month, entries]) => (
+        <div key={month} className="space-y-3">
+          <h2 className="section-title">{month}</h2>
+          <div className="space-y-3">
+            {entries.map(entry => {
+              const moodObj = MOODS.find(m => m.value === entry.mood);
+              return (
+                <div key={entry.id}
+                  className="card p-4 space-y-3 hover:shadow-md transition-shadow"
+                  style={{ borderLeft: `3px solid ${moodObj?.color || "#dadce0"}` }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <MoodPill mood={entry.mood} />
+                      <span className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+                        <Calendar className="w-3 h-3" />
+                        {format(parseISO(entry.date), "EEE, MMM d · h:mm a")}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                    {entry.text}
+                  </p>
+                  {entry.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {entry.tags.map(tag => (
+                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--color-bg-alt)] text-[var(--color-text-secondary)] text-xs">
+                          <Tag className="w-2.5 h-2.5" /> {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* New Entry Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)]">New Journal Entry</h2>
+              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-full hover:bg-[var(--color-bg-alt)]">
+                <X className="w-4 h-4 text-[var(--color-text-muted)]" />
+              </button>
+            </div>
+
+            {/* Mood picker */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[var(--color-text-secondary)]">How are you feeling?</label>
+              <div className="flex gap-2 flex-wrap">
+                {MOODS.map(m => (
+                  <button key={m.value} onClick={() => setMood(m.value)}
+                    className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
+                      mood === m.value
+                        ? "text-white border-transparent"
+                        : "bg-white border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-gray-300"
+                    )}
+                    style={mood === m.value ? { background: m.color, borderColor: m.color } : {}}>
+                    <m.icon className="w-3.5 h-3.5" /> {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Text */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--color-text-secondary)]">What's on your mind?</label>
+              <textarea
+                value={text} onChange={e => setText(e.target.value)}
+                placeholder="Write about your day, what you did, how you felt..."
+                rows={5}
+                className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-border)] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
+              />
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-[var(--color-text-secondary)]">Tags (optional)</label>
+              <div className="flex gap-2">
+                <input value={tagInput} onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addTag(); }}}
+                  placeholder="e.g. weekend, concert, outdoors"
+                  className="flex-1 px-3 py-2 rounded-xl border border-[var(--color-border)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]" />
+                <button onClick={addTag} className="px-3 py-2 rounded-xl bg-[var(--color-bg-alt)] text-[var(--color-text-secondary)] text-sm hover:bg-[var(--color-border)]">Add</button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {tags.map(tag => (
+                    <span key={tag} className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs">
+                      {tag}
+                      <button onClick={() => setTags(p => p.filter(t => t !== tag))} className="ml-0.5 hover:text-red-500"><X className="w-2.5 h-2.5" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-alt)]">Cancel</button>
+              <button onClick={submit} disabled={!text.trim()} className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-sm font-medium disabled:opacity-50 hover:bg-[var(--color-primary-dark)]">Save Entry</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

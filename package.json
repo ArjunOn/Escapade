@@ -7,13 +7,16 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "type-check": "tsc --noEmit",
     "postinstall": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate",
-    "prisma:seed": "prisma db seed",
-    "prisma:studio": "prisma studio",
-    "prisma:deploy": "prisma migrate deploy",
-    "type-check": "tsc --noEmit"
+    "db:setup": "node scripts/setup.js",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "ingest": "curl -X POST http://localhost:3000/api/events/ingest -H 'Content-Type: application/json' -d '{\"lat\":42.3314,\"lng\":-83.0458,\"city\":\"Detroit\",\"radiusMiles\":30,\"daysAhead\":14}'",
+    "health": "curl http://localhost:3000/api/health"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

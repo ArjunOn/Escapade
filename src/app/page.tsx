@@ -1,669 +1,463 @@
 "use client";
 
-import { useMemo, useEffect, useState } from 'react';
-import { useAppStore } from '@/store';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo, useEffect, useState, useCallback } from "react";
+import { useAppStore } from "@/store";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  Zap, Sparkles, Clock, Wallet, ArrowRight,
-  Calendar, TrendingUp, Compass, Plus,
-  ShieldCheck, Target, Rocket, Edit2, Check
-} from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
-import { LoginModal } from '@/components/features/auth/LoginModal';
-import { useAuth } from '@/contexts/AuthContext';
-import { MOCK_EVENTS, DiscoveryEvent } from '@/lib/data';
-import { Badge } from "@/components/ui/badge";
-import { getLocalWeekendSummary, getLocalEngagementSummary } from "@/services/analytics-service";
-import { getLocalGamificationSummary } from "@/services/gamification-service";
-import { getLocalRecommendations } from "@/services/recommendation-service";
+  Calendar, MapPin, Clock, DollarSign, Zap, ChevronRight,
+  Plus, Compass, TrendingUp, Star, ArrowRight, CheckCircle2,
+  Sparkles, RefreshCw
+} from "lucide-react";
+import { LoginModal } from "@/components/features/auth/LoginModal";
+import { cn } from "@/lib/utils";
+import { format, isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 
-// Helper for countdown
-const CountdownTimer = ({ targetDate }: { targetDate: Date }) => {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, mins: 0, secs: 0 });
-      } else {
-        setTimeLeft({
-          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-          mins: Math.floor((diff / (1000 * 60)) % 60),
-          secs: Math.floor((diff / 1000) % 60),
-        });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [targetDate]);
-
-  return (
-    <div className="flex gap-4 font-mono text-3xl md:text-5xl font-extralight tracking-widest text-slate-900">
-      <div className="flex flex-col items-center">
-        <span>{String(timeLeft.days).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase font-bold tracking-tighter text-slate-400">Days</span>
-      </div>
-      <span className="text-slate-300">:</span>
-      <div className="flex flex-col items-center">
-        <span>{String(timeLeft.hours).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase font-bold tracking-tighter text-slate-400">Hrs</span>
-      </div>
-      <span className="text-slate-300">:</span>
-      <div className="flex flex-col items-center">
-        <span>{String(timeLeft.mins).padStart(2, '0')}</span>
-        <span className="text-[10px] uppercase font-bold tracking-tighter text-slate-400">Min</span>
-      </div>
-    </div>
-  );
+// ─── Category color map (GCal-style) ──────────────────────────────────────────
+const CATEGORY_COLORS: Record<string, string> = {
+  "Music":          "#e91e63",
+  "Sports & Fitness":"#f57c00",
+  "Arts":           "#00838f",
+  "Food & Drink":   "#e64a19",
+  "Community":      "#7b1fa2",
+  "Outdoor":        "#2e7d32",
+  "Tech":           "#1565c0",
+  "Family":         "#f9a825",
+  "Wellness":       "#388e3c",
+  "Social":         "#7b1fa2",
+  "Events":         "#1a73e8",
+  "default":        "#5f6368",
 };
 
+function getCategoryColor(category?: string | null) {
+  if (!category) return CATEGORY_COLORS.default;
+  for (const [key, val] of Object.entries(CATEGORY_COLORS)) {
+    if (category.toLowerCase().includes(key.toLowerCase())) return val;
+  }
+  return CATEGORY_COLORS.default;
+}
+
+function getCategoryChipClass(category?: string | null): string {
+  const c = (category || "").toLowerCase();
+  if (c.includes("music"))   return "chip-music";
+  if (c.includes("outdoor") || c.includes("nature")) return "chip-outdoor";
+  if (c.includes("sport"))   return "chip-sports";
+  if (c.includes("social") || c.includes("community")) return "chip-social";
+  if (c.includes("food"))    return "chip-food";
+  if (c.includes("art"))     return "chip-arts";
+  if (c.includes("wellness") || c.includes("health")) return "chip-wellness";
+  if (c.includes("tech"))    return "chip-tech";
+  if (c.includes("family"))  return "chip-family";
+  return "chip-other";
+}
+
+function formatEventDate(dt: string | Date): string {
+  const d = typeof dt === "string" ? parseISO(dt) : dt;
+  if (isToday(d))    return `Today · ${format(d, "h:mm a")}`;
+  if (isTomorrow(d)) return `Tomorrow · ${format(d, "h:mm a")}`;
+  if (isThisWeek(d)) return format(d, "EEEE · h:mm a");
+  return format(d, "MMM d · h:mm a");
+}
+
+// ─── Greeting based on time of day ────────────────────────────────────────────
+function getGreeting(name?: string): string {
+  const h = new Date().getHours();
+  const first = name ? name.split(" ")[0] : "there";
+  if (h < 12) return `Good morning, ${first} ☀️`;
+  if (h < 17) return `Good afternoon, ${first} 👋`;
+  return `Good evening, ${first} 🌙`;
+}
+
+// ─── Event Card Component ─────────────────────────────────────────────────────
+function EventCard({ event, onSave, saved }: { event: any; onSave?: () => void; saved?: boolean }) {
+  const color = getCategoryColor(event.category || event.sourceName);
+  return (
+    <div
+      className="event-card card card-interactive p-4 flex gap-3"
+      style={{ "--event-color": color } as React.CSSProperties}
+      onClick={() => event.url && window.open(event.url, "_blank")}
+    >
+      {event.imageUrl && (
+        <img
+          src={event.imageUrl}
+          alt={event.title}
+          className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+        />
+      )}
+      {!event.imageUrl && (
+        <div
+          className="w-16 h-16 rounded-xl flex-shrink-0 flex items-center justify-center text-2xl"
+          style={{ background: color + "18" }}
+        >
+          <Compass className="w-6 h-6" style={{ color }} />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <h4 className="text-sm font-medium text-[var(--color-text-primary)] truncate">{event.title}</h4>
+        <div className="flex items-center gap-1 mt-0.5 text-xs text-[var(--color-text-secondary)]">
+          <Clock className="w-3 h-3 flex-shrink-0" />
+          <span>{formatEventDate(event.startDateTime)}</span>
+        </div>
+        {event.locationName && (
+          <div className="flex items-center gap-1 mt-0.5 text-xs text-[var(--color-text-secondary)]">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{event.locationName}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between mt-2">
+          <span className={cn("event-chip", getCategoryChipClass(event.category))}>
+            {event.category || event.sourceName}
+          </span>
+          <span className={cn("text-xs font-semibold", event.isFree ? "text-[var(--color-free)]" : "text-[var(--color-text-secondary)]")}>
+            {event.isFree ? "Free" : `$${event.cost}`}
+          </span>
+        </div>
+      </div>
+      {onSave && (
+        <button
+          onClick={e => { e.stopPropagation(); onSave(); }}
+          className={cn(
+            "self-start p-1.5 rounded-full transition-colors",
+            saved ? "text-yellow-500 bg-yellow-50" : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-alt)]"
+          )}
+        >
+          <Star className="w-4 h-4" fill={saved ? "currentColor" : "none"} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, sub, color = "#1a73e8" }: {
+  icon: React.ElementType; label: string; value: string; sub?: string; color?: string;
+}) {
+  return (
+    <div className="card p-4">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: color + "18" }}>
+          <Icon className="w-4 h-4" style={{ color }} />
+        </div>
+        <span className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</span>
+      </div>
+      <p className="text-2xl font-medium text-[var(--color-text-primary)]">{value}</p>
+      {sub && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+// ─── Activity Row ─────────────────────────────────────────────────────────────
+function ActivityRow({ activity }: { activity: any }) {
+  const color = getCategoryColor(activity.category);
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-[var(--color-bg-alt)] transition-colors">
+      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-sm font-medium", activity.completed ? "line-through text-[var(--color-text-muted)]" : "text-[var(--color-text-primary)]")}>
+          {activity.title}
+        </p>
+        <p className="text-xs text-[var(--color-text-secondary)]">{activity.date} · {activity.startTime}</p>
+      </div>
+      <span className="text-xs text-[var(--color-text-secondary)]">${activity.cost}</span>
+      {activity.completed && <CheckCircle2 className="w-4 h-4 text-[var(--color-success)]" />}
+    </div>
+  );
+}
+
+// ─── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
-  const {
-    userProfile,
-    currentUserEmail,
-    expenses,
-    weeklySavingsGoal,
-    activities,
-    history,
-    setWeeklySavingsGoal,
-    initializeEvent,
-    initializedEventIds,
-    syncStore
-  } = useAppStore();
+  const { userProfile, expenses, weeklySavingsGoal, activities, syncStore, currentUserEmail, availabilityWindows } = useAppStore();
   const router = useRouter();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [nearbyEvents, setNearbyEvents] = useState<any[]>([]);
+  const [scoredEvents, setScoredEvents] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => { if (currentUserEmail) syncStore(); }, [currentUserEmail, syncStore]);
 
   useEffect(() => {
-    if (currentUserEmail) {
-      syncStore();
-    }
-  }, [currentUserEmail, syncStore]);
-
-  // Goal edit state
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [goalInput, setGoalInput] = useState(weeklySavingsGoal?.toString() || "0");
-
-  // Redirect to onboarding if not completed
-  useEffect(() => {
-    if (userProfile && !userProfile.onboardingCompleted) {
-      router.push('/onboarding');
-    }
+    if (userProfile && !userProfile.onboardingCompleted) router.push("/onboarding");
   }, [userProfile, router]);
 
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0 (Sun) - 6 (Sat)
-  const isWeekend = dayOfWeek === 0 || dayOfWeek >= 5; // Fri, Sat, Sun
-  const isSavingMode = !isWeekend;
-
-  // Calculate next Friday at 17:00
-  const nextFriday = useMemo(() => {
-    const d = new Date();
-    const diff = (5 - d.getDay() + 7) % 7;
-    d.setDate(d.getDate() + diff);
-    d.setHours(17, 0, 0, 0);
-    return d;
+  const fetchNearby = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const res = await fetch(`/api/events?lat=42.3314&lng=-83.0458&days=14&limit=6`);
+      if (res.ok) {
+        const data = await res.json();
+        setNearbyEvents(data.events || []);
+      }
+    } catch (_) {} finally { setEventsLoading(false); }
   }, []);
 
-  const totalSpentThisWeek = useMemo(() => {
-    return expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  }, [expenses]);
+  // Fetch + score personalised recommendations
+  const fetchRecommendations = useCallback(async () => {
+    if (!userProfile) return;
+    try {
+      const { fetchAndScoreRecommendations } = await import("@/services/recommendation-service");
+      const totalSpentNow = expenses.reduce((s, e) => s + e.amount, 0);
+      const results = await fetchAndScoreRecommendations({
+        userPreferences: userProfile.preferences || [],
+        userVibes: userProfile.vibes || [],
+        weeklyBudgetRemaining: Math.max((weeklySavingsGoal || 0) - totalSpentNow, 0),
+        userLat: 42.3314,
+        userLng: -83.0458,
+        availabilityWindows: availabilityWindows || [],
+      }, 4);
+      setScoredEvents(results);
+    } catch (_) {}
+  }, [userProfile, expenses, weeklySavingsGoal]);
 
-  const savingsProgress = Math.min((totalSpentThisWeek / (weeklySavingsGoal || 1)) * 100, 100);
-  const savingsRemaining = Math.max((weeklySavingsGoal || 0) - totalSpentThisWeek, 0);
+  useEffect(() => { if (user) fetchNearby(); }, [user, fetchNearby]);
+  useEffect(() => { if (user && userProfile?.onboardingCompleted) fetchRecommendations(); }, [user, userProfile, fetchRecommendations]);
 
-  const weekendSummary = useMemo(
-    () =>
-      getLocalWeekendSummary({
-        activities,
-        expenses,
-        weeklySavingsGoal,
-      }),
-    [activities, expenses, weeklySavingsGoal]
+  const totalSpent = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
+  const budgetRemaining = Math.max((weeklySavingsGoal || 0) - totalSpent, 0);
+  const budgetPct = weeklySavingsGoal > 0 ? Math.min((totalSpent / weeklySavingsGoal) * 100, 100) : 0;
+  const upcomingActivities = useMemo(() =>
+    activities.filter(a => !a.completed).slice(0, 5), [activities]);
+
+  if (authLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+    </div>
   );
 
-  const engagementSummary = useMemo(
-    () => getLocalEngagementSummary({ history }),
-    [history]
-  );
-
-  const gamification = useMemo(
-    () => getLocalGamificationSummary({ activities, history }),
-    [activities, history]
-  );
-
-  const availableHours = useMemo(() => {
-    const idealWeekendHours = 16; // two 8-hour blocks as a soft target
-    return Math.max(idealWeekendHours - weekendSummary.totalHoursPlanned, 0);
-  }, [weekendSummary.totalHoursPlanned]);
-
-  const curatedEvents = useMemo(() => {
-    if (!userProfile) return [];
-    return MOCK_EVENTS.map(event => {
-      const matchScore = event.tags.filter(t => userProfile.preferences.includes(t)).length;
-      const vibeScore = event.vibes.filter(v => userProfile.vibes.includes(v)).length;
-      const isInitialized = activities.some(a => a.originalEventId === event.id);
-      return {
-        ...event,
-        priority: matchScore + vibeScore,
-        isInitialized
-      };
-    }).sort((a, b) => b.priority - a.priority).slice(0, 2);
-  }, [userProfile, initializedEventIds, activities]);
-
-  const trendingEvents = useMemo(() => {
-    return MOCK_EVENTS.filter(e => !curatedEvents.some(ce => ce.id === e.id))
-      .map(event => ({
-        ...event,
-        isInitialized: activities.some(a => a.originalEventId === event.id)
-      })).slice(0, 3);
-  }, [curatedEvents, activities]);
-
-  const smartSuggestions = useMemo(
-    () =>
-      getLocalRecommendations({
-        userProfile: userProfile ?? null,
-        activities,
-        expenses,
-        weeklySavingsGoal,
-        availableHours,
-      }),
-    [userProfile, activities, expenses, weeklySavingsGoal, availableHours]
-  );
-
-  const saveGoal = () => {
-    const val = parseFloat(goalInput);
-    if (!isNaN(val)) {
-      setWeeklySavingsGoal(val);
-      setIsEditingGoal(false);
-    }
-  };
-
-  if (authLoading || (user && !currentUserEmail)) {
-    return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <div className="text-sm font-semibold text-slate-400 animate-pulse">Loading your dashboard...</div>
-      </div>
-    );
-  }
-
-  if (!user && !currentUserEmail) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-12 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6 max-w-2xl"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold uppercase tracking-[0.25em] mb-4">
-            <Sparkles className="w-4 h-4" />
-            Your weekend, gently organized
-          </div>
-          <h1 className="text-4xl md:text-5xl font-semibold text-slate-900 tracking-tight leading-tight">
-            Escape the ordinary,{" "}
-            <span className="text-primary">without burning out.</span>
-          </h1>
-          <p className="text-base md:text-lg text-slate-500 font-medium leading-relaxed px-4">
-            Escapade is a calm weekend companion that balances time, budget, and energy
-            so you can look forward to your days off—without spreadsheets or stress.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
-          className="flex flex-col sm:flex-row gap-4 items-center"
-        >
-          <Link href="/signup">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-semibold tracking-wide text-xs h-12 px-8 rounded-2xl shadow-[0_18px_45px_rgba(15,23,42,0.12)] group">
-              Get Started <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setIsLoginModalOpen(true)}
-            className="border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs h-12 px-8 rounded-2xl"
-          >
-            I already have an account
-          </Button>
-        </motion.div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-12 border-t border-slate-200 pt-12">
-          {[
-            { icon: Target, title: "Gentle planning", desc: "A simple weekend canvas for time, energy, and money." },
-            { icon: Wallet, title: "Kind-to-you budgeting", desc: "Stay mindful of money with soft nudges, not alarms." },
-            { icon: Compass, title: "Discovery that fits", desc: "Ideas that match your mood, budget, and free hours." }
-          ].map((feature, i) => (
-            <motion.div
-              key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 + (i * 0.1) }}
-              className="space-y-4 p-6"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-primary mx-auto md:mx-0">
-                <feature.icon className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">{feature.title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">{feature.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        <LoginModal
-          isOpen={isLoginModalOpen}
-          onClose={() => setIsLoginModalOpen(false)}
-        />
-      </div>
-    );
-  }
-
+  if (!user) return <LandingPage onLogin={() => setIsLoginModalOpen(true)} isLoginOpen={isLoginModalOpen} onLoginClose={() => setIsLoginModalOpen(false)} />;
   if (!userProfile) return null;
 
   return (
-    <div className="space-y-10 py-6">
-      {/* Header / Mode Indicator */}
-      <header className="space-y-2 relative">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-semibold uppercase tracking-wide text-primary"
-        >
-          {isSavingMode ? (
-            <>
-              <ShieldCheck className="w-3 h-3" />
-              Weekday mode · building your weekend fund
-            </>
-          ) : (
-            <>
-              <Rocket className="w-3 h-3" />
-              Weekend mode · time to enjoy
-            </>
-          )}
-        </motion.div>
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">
-              {isSavingMode ? "Plan the weekend you need." : "Enjoy the weekend you planned."}
-            </h1>
-            <p className="text-sm text-slate-500">
-              Welcome back, {userProfile.name}. Here’s how your time and budget are shaping up.
-            </p>
-          </div>
-          {isSavingMode && (
-            <div className="flex flex-col items-end">
-              <p className="text-[10px] uppercase font-semibold tracking-[0.25em] text-slate-400 mb-2">
-                Next weekend in
-              </p>
-              <CountdownTimer targetDate={nextFriday} />
-            </div>
-          )}
+    <div className="space-y-6 animate-fade-up">
+      {/* Greeting Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="page-header">{getGreeting(userProfile.name)}</h1>
+          <p className="page-subtitle">
+            {format(new Date(), "EEEE, MMMM d")} · Here's what's happening around you
+          </p>
         </div>
-      </header>
+        <Link href="/discover"
+          className="hidden md:flex items-center gap-2 btn-primary text-sm rounded-full px-4 py-2">
+          <Plus className="w-4 h-4" /> Find Events
+        </Link>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Primary Column */}
-        <div className="md:col-span-8 space-y-8">
-          {/* Weekend snapshot */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="glass">
-              <CardContent className="p-4 space-y-2">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
-                  Available hours
-                </p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  {availableHours.toFixed(0)}h
-                </p>
-                <p className="text-xs text-slate-500">
-                  Based on your current plans, you still have room to breathe.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="glass">
-              <CardContent className="p-4 space-y-2">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
-                  Weekend completion
-                </p>
-                <div className="flex items-baseline justify-between">
-                  <p className="text-2xl font-semibold text-slate-900">
-                    {weekendSummary.completionRate.toFixed(0)}%
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {weekendSummary.completedActivities}/{weekendSummary.totalActivities} done
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="glass">
-              <CardContent className="p-4 space-y-2">
-                <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
-                  Planning streak
-                </p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  {engagementSummary.planningStreak}
-                </p>
-                <p className="text-xs text-slate-500">
-                  weekends in a row with at least one plan.
-                </p>
-              </CardContent>
-            </Card>
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={DollarSign} label="Budget remaining" value={`$${budgetRemaining.toFixed(0)}`}
+          sub={`of $${weeklySavingsGoal} this week`} color="#1a73e8" />
+        <StatCard icon={Calendar} label="Planned activities" value={String(upcomingActivities.length)}
+          sub="upcoming this week" color="#e91e63" />
+        <StatCard icon={TrendingUp} label="Spent so far" value={`$${totalSpent.toFixed(0)}`}
+          sub={`${budgetPct.toFixed(0)}% of budget`} color="#f57c00" />
+        <StatCard icon={Zap} label="Events nearby" value={eventsLoading ? "..." : String(nearbyEvents.length)}
+          sub="in the next 14 days" color="#34a853" />
+      </div>
+
+      {/* Budget Progress Bar */}
+      <div className="card p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">Weekly Budget</span>
+          <span className="text-sm text-[var(--color-text-secondary)]">${totalSpent.toFixed(0)} / ${weeklySavingsGoal}</span>
+        </div>
+        <div className="h-2 bg-[var(--color-bg-alt)] rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${budgetPct}%`,
+              background: budgetPct > 90 ? "var(--color-error)" : budgetPct > 70 ? "var(--color-warning)" : "var(--color-primary)"
+            }}
+          />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-xs text-[var(--color-text-muted)]">
+            {budgetPct > 90 ? "⚠️ Almost at limit" : `$${budgetRemaining.toFixed(0)} remaining`}
+          </span>
+          <Link href="/budget" className="text-xs text-[var(--color-primary)] font-medium">Manage →</Link>
+        </div>
+      </div>
+
+      {/* Picked For You — personalised scored recommendations */}
+      {scoredEvents.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Picked For You</h2>
+            </div>
+            <Link href="/discover" className="text-xs text-[var(--color-primary)] font-medium flex items-center gap-1">
+              See all <ChevronRight className="w-3 h-3" />
+            </Link>
           </div>
-          {isSavingMode ? (
-            /* Discovery Showcase */
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">Top Matched Escapades</h2>
-                <Link href="/discover" className="text-[10px] font-bold text-primary flex items-center gap-2 group tracking-widest uppercase">
-                  EXPLORE ALL <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {curatedEvents.map((event) => (
-                  <Card key={event.id} className="glass border-slate-200 hover:border-primary/20 transition-all overflow-hidden relative group">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-                          {event.icon}
-                        </div>
-                        <Badge variant="outline" className="border-primary/20 text-primary text-[8px] font-bold uppercase tracking-widest">
-                          {event.priority > 2 ? 'Elite Match' : 'Recommended'}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-lg font-bold text-slate-900 leading-tight">{event.title}</h4>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                          <Compass className="w-3 h-3" /> {event.location}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                        <div className="text-lg font-bold text-slate-900">${event.cost}</div>
-                        <Button
-                          size="sm"
-                          disabled={event.isInitialized}
-                          onClick={() => !event.isInitialized && initializeEvent({
-                            id: event.id,
-                            title: event.title,
-                            category: event.category as any,
-                            cost: event.cost,
-                            date: event.date,
-                            time: event.time,
-                            location: event.location
-                          })}
-                          className={cn(
-                            "h-8 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
-                            event.isInitialized
-                              ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 cursor-default"
-                              : "bg-primary hover:bg-primary/90 text-white"
-                          )}
-                        >
-                          {event.isInitialized ? (
-                            <span className="flex items-center gap-2">
-                              <Check className="w-3 h-3" /> Added
-                            </span>
-                          ) : "Add Activity"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ) : (
-            /* Adventure Mode Core UI */
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">This weekend&apos;s plan</h2>
-                <Link href="/planner" className="text-xs font-semibold text-primary flex items-center gap-2 group">
-                  Open planner <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                {activities.length > 0 ? activities.slice(0, 3).map((act) => (
-                  <Card key={act.id} className="glass hover:bg-slate-50 transition-all cursor-pointer group">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center text-white",
-                          act.category === 'Relaxation' ? 'bg-[#60a5fa]/20 text-[#60a5fa]' :
-                            act.category === 'Social' ? 'bg-[#34d399]/20 text-[#34d399]' :
-                              act.category === 'Outdoor' ? 'bg-[#facc15]/20 text-[#facc15]' :
-                                act.category === 'Sports' ? 'bg-[#f87171]/20 text-[#f87171]' :
-                                  'bg-[#a78bfa]/20 text-[#a78bfa]'
-                        )}>
-                          <Calendar className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-slate-900">{act.title}</h4>
-                          <p className="text-xs text-slate-500 font-medium">{act.date} • {act.startTime}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="border-slate-200 text-[10px] text-slate-500 uppercase font-semibold tracking-wide">
-                        {act.category}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                )) : (
-                  <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                      <Compass className="w-6 h-6" />
-                    </div>
-                    <p className="text-sm text-slate-500">No activities scheduled yet.</p>
-                    <Button size="sm" variant="outline" className="border-slate-200 hover:bg-slate-50">
-                      Start a simple plan
-                    </Button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {scoredEvents.map((ev: any) => {
+              const color = getCategoryColor(ev.category);
+              return (
+                <div key={ev.id}
+                  onClick={() => ev.url && window.open(ev.url, "_blank")}
+                  className="card card-interactive p-3 space-y-2 cursor-pointer"
+                  style={{ "--event-color": color } as React.CSSProperties}>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className={cn("event-chip text-[10px]", getCategoryChipClass(ev.category))}>
+                      {ev.category || "Event"}
+                    </span>
+                    <span className={cn("text-xs font-semibold flex-shrink-0", ev.isFree ? "text-[var(--color-free)]" : "text-[var(--color-text-secondary)]")}>
+                      {ev.isFree ? "Free" : `$${ev.cost}`}
+                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Discovery / Showcase Sections */}
-          <div className="space-y-12">
-            {/* Top Matched (already there) */}
-
-            {/* Trending Section */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-900 underline decoration-emerald-300/60 underline-offset-8">
-                  Ideas other people love
-                </h2>
-                <div className="text-[10px] font-medium text-emerald-500 flex items-center gap-2 tracking-wide uppercase">
-                  <Zap className="w-3 h-3" /> Popular right now
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] line-clamp-2 leading-snug">{ev.title}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] truncate">{ev.reason}</p>
+                  <div className="flex items-center gap-1 text-xs text-[var(--color-text-secondary)]">
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span>{format(ev.startDateTime instanceof Date ? ev.startDateTime : new Date(ev.startDateTime), "EEE, MMM d")}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {trendingEvents.map((event) => (
-                  <Card key={event.id} className="glass hover:border-emerald-300/40 transition-all overflow-hidden relative group">
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex justify-between items-center">
-                        <div className="text-xl">{event.icon}</div>
-                        <div className="text-[9px] font-medium text-slate-500 uppercase tracking-wide">
-                          {event.category}
-                        </div>
-                      </div>
-                      <h4 className="font-bold text-white text-sm leading-tight line-clamp-1">{event.title}</h4>
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                        <div className="text-sm font-semibold text-slate-700">${event.cost}</div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={event.isInitialized}
-                          onClick={() => !event.isInitialized && initializeEvent({
-                            id: event.id,
-                            title: event.title,
-                            category: event.category as any,
-                            cost: event.cost,
-                            date: event.date,
-                            time: event.time,
-                            location: event.location
-                          })}
-                          className={cn(
-                            "h-7 px-3 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-all",
-                            event.isInitialized
-                              ? "text-emerald-500 bg-emerald-50"
-                              : "text-primary hover:bg-primary/10"
-                          )}
-                        >
-                          {event.isInitialized ? <Check className="w-3 h-3" /> : "Add"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
+      )}
 
-        {/* Sidebar Column (Quick Actions / Stats) */}
-        <div className="md:col-span-4 space-y-8">
-          <section className="space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Smart suggestions
-            </h3>
-            <Card className="glass">
-              <CardContent className="p-4 space-y-3">
-                {smartSuggestions.length === 0 ? (
-                  <p className="text-xs text-slate-500">
-                    As you add preferences, activities, and a savings goal, this panel will start
-                    suggesting weekends that fit your life.
-                  </p>
-                ) : (
-                  <ul className="space-y-3">
-                    {smartSuggestions.slice(0, 3).map((item) => (
-                      <li key={item.id} className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-900">
-                            {item.title}
-                          </p>
-                          <p className="text-[11px] text-slate-500">
-                            {item.location} · ${item.cost}
-                          </p>
-                          <p className="text-[11px] text-slate-400">
-                            {item.reason}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </section>
-          {isSavingMode && (
-            <section className="space-y-4">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Escapade fund
-              </h3>
-              <Card className="glass border-primary/10 bg-primary/5 overflow-hidden">
-                <CardContent className="p-6 space-y-6">
-                  <div className="flex justify-between items-end">
-                    <div className="space-y-1">
-                      <div className="text-[10px] uppercase font-semibold tracking-wide text-primary">
-                        Remaining this week
-                      </div>
-                      <div className="text-3xl font-semibold font-mono text-slate-900">
-                        ${savingsRemaining.toFixed(0)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] uppercase font-semibold tracking-wide text-slate-400">
-                        Weekly goal
-                      </div>
-                      <div className="text-lg font-semibold text-slate-800">
-                        ${weeklySavingsGoal.toFixed(0)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[9px] font-medium uppercase tracking-wide text-slate-500">
-                      <span>Progress</span>
-                      <span>{savingsProgress.toFixed(0)}%</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-white rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${savingsProgress}%` }}
-                        className="h-full bg-primary"
-                      />
-                    </div>
-                  </div>
-                  <Link href="/budget">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full mt-2 text-[10px] font-medium uppercase tracking-wide text-slate-600 hover:text-slate-900 hover:bg-white h-8"
-                    >
-                      Manage Budget <ArrowRight className="w-3 h-3 ml-2" />
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            </section>
-          )}
-
-          <section className="space-y-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Quick actions
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              <Link href="/budget">
-                <Button className="w-full justify-start bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 h-14 rounded-2xl gap-4 group">
-                  <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
-                    <Plus className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs font-bold">New Expense</div>
-                    <div className="text-[10px] text-slate-500 uppercase tracking-wide">
-                      Capture something you spent
-                    </div>
-                  </div>
-                </Button>
-              </Link>
-              <Link href="/planner">
-                <Button className="w-full justify-start bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 h-14 rounded-2xl gap-4 group">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <Plus className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs font-bold">Add an activity</div>
-                    <div className="text-[10px] text-slate-500 uppercase tracking-wide">
-                      Block time for something that matters
-                    </div>
-                  </div>
-                </Button>
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left: Events */}
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Events Near You</h2>
+            <div className="flex items-center gap-2">
+              <button onClick={fetchNearby} className="p-1.5 rounded-full hover:bg-[var(--color-bg-alt)] transition-colors">
+                <RefreshCw className={cn("w-4 h-4 text-[var(--color-text-muted)]", eventsLoading && "animate-spin")} />
+              </button>
+              <Link href="/discover" className="text-xs text-[var(--color-primary)] font-medium flex items-center gap-1">
+                See all <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
-          </section>
-
-          <section className="space-y-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              A little reflection
-            </h3>
+          </div>
+          {eventsLoading ? (
             <div className="space-y-3">
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-                <div className="text-xs font-medium text-slate-700 italic line-clamp-2">
-                  "Ready to recharge this weekend. Need to focus on nature..."
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">
-                  Example journal note • you can add your own from the planner
-                </div>
-              </div>
+              {[1,2,3].map(i => (
+                <div key={i} className="card p-4 h-24 animate-pulse bg-[var(--color-bg-alt)]" />
+              ))}
             </div>
-          </section>
+          ) : nearbyEvents.length > 0 ? (
+            <div className="space-y-2">
+              {nearbyEvents.slice(0,6).map(ev => (
+                <EventCard key={ev.id} event={ev}
+                  saved={savedIds.has(ev.id)}
+                  onSave={() => setSavedIds(p => {
+                    const n = new Set(p);
+                    n.has(ev.id) ? n.delete(ev.id) : n.add(ev.id);
+                    return n;
+                  })} />
+              ))}
+            </div>
+          ) : (
+            <div className="card p-8 text-center">
+              <Compass className="w-8 h-8 text-[var(--color-text-muted)] mx-auto mb-3" />
+              <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+                No events loaded yet. Trigger an ingestion to pull real events.
+              </p>
+              <button onClick={fetchNearby} className="btn-ghost text-sm rounded-full px-4 py-2">
+                Refresh
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right: My Week */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">My Week</h2>
+            <Link href="/planner" className="text-xs text-[var(--color-primary)] font-medium flex items-center gap-1">
+              Open planner <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="card overflow-hidden">
+            {upcomingActivities.length > 0 ? (
+              <div className="divide-y divide-[var(--color-border-light)]">
+                {upcomingActivities.map(act => (
+                  <div key={act.id} className="px-1 py-0.5">
+                    <ActivityRow activity={act} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                <Calendar className="w-8 h-8 text-[var(--color-text-muted)] mx-auto mb-2" />
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3">Nothing planned yet</p>
+                <Link href="/planner" className="btn-ghost text-xs rounded-full px-3 py-1.5 inline-flex items-center gap-1">
+                  <Plus className="w-3 h-3" /> Add activity
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Quick AI suggestion */}
+          <div className="card p-4 border-[var(--color-primary)] border-opacity-30 bg-[var(--color-primary-light)]">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
+              <span className="text-xs font-semibold text-[var(--color-primary)]">AI Planner</span>
+            </div>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+              Let AI plan your perfect weekend based on your budget, interests, and real nearby events.
+            </p>
+            <Link href="/ai" className="flex items-center gap-2 text-sm font-medium text-[var(--color-primary)]">
+              Plan my weekend <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+// ─── Landing Page (unauthenticated) ──────────────────────────────────────────
+function LandingPage({ onLogin, isLoginOpen, onLoginClose }: {
+  onLogin: () => void; isLoginOpen: boolean; onLoginClose: () => void;
+}) {
+  const features = [
+    { icon: Compass, color: "#1a73e8", title: "Discover Real Events", desc: "Live events from Eventbrite & Ticketmaster near you — music, food, sports, arts, and more." },
+    { icon: DollarSign, color: "#34a853", title: "Budget-Aware Planning", desc: "Set a weekly budget and see which events you can actually afford right now." },
+    { icon: Sparkles, color: "#e91e63", title: "AI Weekend Planner", desc: "Tell AI your free time and budget. Get a full weekend schedule using real local events." },
+  ];
+  return (
+    <div className="max-w-3xl mx-auto text-center space-y-12 py-8">
+      <div className="space-y-4">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-semibold">
+          <Zap className="w-3.5 h-3.5" /> Real events · Smart planning · Your budget
+        </div>
+        <h1 className="text-4xl font-medium text-[var(--color-text-primary)] leading-tight">
+          Your personal weekend<br />event companion
+        </h1>
+        <p className="text-base text-[var(--color-text-secondary)] max-w-xl mx-auto">
+          Discover what's happening near you, plan your time, and stick to your budget — all in one friendly app.
+        </p>
+        <div className="flex gap-3 justify-center pt-2">
+          <Link href="/signup" className="btn-primary rounded-full px-6 py-2.5 text-sm font-medium">
+            Get started free
+          </Link>
+          <button onClick={onLogin} className="btn-ghost rounded-full px-6 py-2.5 text-sm font-medium border border-[var(--color-border)]">
+            Sign in
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+        {features.map(f => (
+          <div key={f.title} className="card p-5 space-y-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: f.color + "18" }}>
+              <f.icon className="w-5 h-5" style={{ color: f.color }} />
+            </div>
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{f.title}</h3>
+            <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{f.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <LoginModal isOpen={isLoginOpen} onClose={onLoginClose} />
+    </div>
+  );
+}

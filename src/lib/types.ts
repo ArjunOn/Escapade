@@ -1,5 +1,13 @@
 export type Category = 'Relaxation' | 'Social' | 'Outdoor' | 'Sports' | 'Events' | 'Traveling' | 'Other' | 'Budget';
 
+export interface AvailabilityWindow {
+  id: string;
+  dayOfWeek: number;   // 0=Sun … 6=Sat
+  startHour: number;   // 0–23
+  endHour: number;     // 0–23
+  label?: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -66,14 +74,15 @@ export interface UserData {
   userProfile: UserProfile;
   history: MissionHistory[];
   initializedEventIds: string[];
+  availabilityWindows: AvailabilityWindow[];
 }
 
 export interface AppState {
   // Global Session State
   currentUserEmail: string | null;
-  accounts: Record<string, UserData>; // Keyed by email
+  accounts: Record<string, UserData>;
 
-  // Computed/Active State (mirrors current user data for accessibility)
+  // Computed/Active State
   activities: Activity[];
   expenses: Expense[];
   journalEntries: JournalEntry[];
@@ -81,6 +90,7 @@ export interface AppState {
   userProfile: UserProfile | null;
   history: MissionHistory[];
   initializedEventIds: string[];
+  availabilityWindows: AvailabilityWindow[];
 
   // Actions
   signup: (profile: UserProfile) => void;
@@ -102,8 +112,12 @@ export interface AppState {
   addJournalEntry: (entry: JournalEntry) => void;
   resetStore: () => void;
 
-  // New Actions
   initializeEvent: (event: { title: string, category: Category, cost: number, date: string, time: string, location: string, id: string }) => void;
   completeMission: () => void;
   syncStore: () => void;
+
+  // Availability
+  setAvailabilityWindows: (windows: AvailabilityWindow[]) => void;
+  addAvailabilityWindow: (window: AvailabilityWindow) => void;
+  removeAvailabilityWindow: (id: string) => void;
 }

@@ -1,150 +1,110 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAppStore } from "@/store";
-import { getLocalWeekendSummary, getLocalEngagementSummary } from "@/services/analytics-service";
-import { getLocalGamificationSummary } from "@/services/gamification-service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Trophy, Activity as ActivityIcon, CalendarRange, LineChart } from "lucide-react";
+import { BarChart2, TrendingUp, CheckCircle2, DollarSign, Zap } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid
+} from "recharts";
+import { format, parseISO, startOfWeek } from "date-fns";
 
-export default function InsightsPage() {
-  const { activities, expenses, weeklySavingsGoal, history } = useAppStore();
-
-  const weekend = getLocalWeekendSummary({
-    activities,
-    expenses,
-    weeklySavingsGoal,
-  });
-  const engagement = getLocalEngagementSummary({ history });
-  const gamification = getLocalGamificationSummary({ activities, history });
-
+function StatTile({ icon: Icon, label, value, color = "#1a73e8" }: {
+  icon: React.ElementType; label: string; value: string; color?: string;
+}) {
   return (
-    <div className="space-y-8 py-4">
-      <div className="space-y-2">
-        <h1 className="text-4xl md:text-5xl font-bold text-slate-900">Weekend Insights</h1>
-        <p className="text-sm text-slate-500">
-          A gentle overview of how you spend your time and budget across weekends.
-        </p>
+    <div className="card p-4">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: color + "18" }}>
+          <Icon className="w-5 h-5" style={{ color }} />
+        </div>
+        <span className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wide">{label}</span>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <ActivityIcon className="w-4 h-4 text-primary" />
-              Time utilization
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">Planned hours</span>
-              <span className="font-semibold text-slate-800">
-                {weekend.totalHoursPlanned.toFixed(0)}h
-              </span>
-            </div>
-            <Progress value={weekend.completionRate} />
-            <p className="text-xs text-slate-500">
-              You completed {weekend.completedActivities} of {weekend.totalActivities} planned
-              activities ({weekend.completionRate}%).
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <CalendarRange className="w-4 h-4 text-primary" />
-              Planning streak
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-semibold text-slate-800">
-                {engagement.planningStreak}
-              </span>
-              <span className="text-xs text-slate-500 uppercase tracking-wide">
-                weekends in a row
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              Keep planning a little something each weekend to grow this streak.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <Trophy className="w-4 h-4 text-accent" />
-              Weekend score
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-semibold text-slate-800">
-                {gamification.weekendScore}
-              </span>
-              <span className="text-xs text-slate-500 uppercase tracking-wide">
-                out of 100
-              </span>
-            </div>
-            <Progress value={gamification.weekendScore} />
-            <div className="flex flex-wrap gap-1 mt-1">
-              {gamification.badges
-                .filter((b) => b.unlocked)
-                .map((badge) => (
-                  <span
-                    key={badge.id}
-                    className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-                  >
-                    {badge.label}
-                  </span>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="glass">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <LineChart className="w-4 h-4 text-primary" />
-              Budget & habits over time
-            </CardTitle>
-            <p className="text-xs text-slate-500 mt-1">
-              A high-level view of your average spend and activity mix across completed weekends.
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500 uppercase tracking-wide">
-              Average weekend spend
-            </p>
-            <p className="text-xl font-semibold text-slate-800">
-              ${engagement.averageWeekendSpend.toFixed(0)}
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500 uppercase tracking-wide">
-              Activity diversity
-            </p>
-            <p className="text-xl font-semibold text-slate-800">
-              {weekend.activityDiversityScore.toFixed(0)}%
-            </p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-slate-500 uppercase tracking-wide">
-              Budget accuracy
-            </p>
-            <p className="text-xl font-semibold text-slate-800">
-              {weekend.budgetAccuracy.toFixed(0)}%
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-3xl font-medium text-[var(--color-text-primary)]">{value}</p>
     </div>
   );
 }
 
+export default function InsightsPage() {
+  const { activities, expenses, history, weeklySavingsGoal } = useAppStore();
+
+  const completionRate = useMemo(() => {
+    if (!activities.length) return 0;
+    return Math.round((activities.filter(a => a.completed).length / activities.length) * 100);
+  }, [activities]);
+
+  const totalSpent = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
+
+  // Spending by category for bar chart
+  const categoryData = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of expenses) map[e.category] = (map[e.category] || 0) + e.amount;
+    return Object.entries(map).map(([name, value]) => ({ name, value: Math.round(value) })).sort((a, b) => b.value - a.value);
+  }, [expenses]);
+
+  // Expenses over time (by week) for line chart
+  const weeklySpend = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of expenses) {
+      const wk = format(startOfWeek(parseISO(e.date), { weekStartsOn: 1 }), "MMM d");
+      map[wk] = (map[wk] || 0) + e.amount;
+    }
+    return Object.entries(map).map(([week, amount]) => ({ week, amount: Math.round(amount) }));
+  }, [expenses]);
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <div>
+        <h1 className="page-header">Insights</h1>
+        <p className="page-subtitle">Your activity and spending trends</p>
+      </div>
+
+      {/* Stat tiles */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatTile icon={CheckCircle2} label="Completion rate" value={`${completionRate}%`} color="#34a853" />
+        <StatTile icon={DollarSign} label="Total spent" value={`$${totalSpent.toFixed(0)}`} color="#ea4335" />
+        <StatTile icon={Zap} label="Activities" value={String(activities.length)} color="#fbbc04" />
+        <StatTile icon={TrendingUp} label="Weekly goal" value={`$${weeklySavingsGoal}`} color="#1a73e8" />
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {categoryData.length > 0 && (
+          <div className="card p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Spending by Category</h2>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={categoryData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => [`$${v}`, "Spent"]} />
+                <Bar dataKey="value" fill="#1a73e8" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        {weeklySpend.length > 0 && (
+          <div className="card p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Weekly Spending</h2>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={weeklySpend} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f3f4" />
+                <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => [`$${v}`, "Spent"]} />
+                <Line type="monotone" dataKey="amount" stroke="#1a73e8" strokeWidth={2} dot={{ fill: "#1a73e8", r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      {(categoryData.length === 0 && weeklySpend.length === 0) && (
+        <div className="card p-10 text-center">
+          <BarChart2 className="w-10 h-10 text-[var(--color-text-muted)] mx-auto mb-3" />
+          <p className="text-sm text-[var(--color-text-secondary)]">
+            Add some expenses and activities to see your insights here.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

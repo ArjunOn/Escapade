@@ -1,196 +1,202 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { useAppStore } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { cn } from '@/lib/utils';
+import { useState, useMemo } from "react";
+import { useAppStore } from "@/store";
+import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight, CalendarDays, DollarSign } from "lucide-react";
 import {
-    ChevronLeft, ChevronRight, LayoutGrid, List,
-    Calendar as CalendarIcon, Wallet, Activity
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+  format, startOfMonth, endOfMonth, startOfWeek, addDays,
+  isSameMonth, isSameDay, parseISO
+} from "date-fns";
+
+const CAT_COLORS: Record<string, string> = {
+  Events: "#1a73e8", Relaxation: "#60a5fa", Social: "#34d399",
+  Outdoor: "#86efac", Sports: "#f87171", Budget: "#fbbf24",
+  Traveling: "#f97316", Other: "#9aa0a6",
+};
 
 export default function CalendarPage() {
-    const { activities, expenses } = useAppStore();
-    const [view, setView] = useState<'weekly' | 'monthly'>('monthly');
-    const [currentDate, setCurrentDate] = useState(new Date());
+  const { activities, expenses } = useAppStore();
+  const [current, setCurrent] = useState(new Date());
 
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
+  const monthStart = startOfMonth(current);
+  const monthEnd   = endOfMonth(current);
+  const gridStart  = startOfWeek(monthStart, { weekStartsOn: 0 });
 
-    const generateMonthlyGrid = () => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDay = new Date(year, month, 1).getDay();
+  // Build a 6-week grid (42 cells)
+  const grid = useMemo(() => {
+    const days: Date[] = [];
+    for (let i = 0; i < 42; i++) days.push(addDays(gridStart, i));
+    return days;
+  }, [gridStart]);
 
-        const grid = [];
-        for (let i = 0; i < firstDay; i++) grid.push(null);
-        for (let i = 1; i <= daysInMonth; i++) grid.push(new Date(year, month, i));
-        return grid;
-    };
+  const today = new Date();
 
-    const getDailyTotal = (dateStr: string) => {
-        const expenseTotal = expenses
-            .filter(e => e.date.startsWith(dateStr))
-            .reduce((sum, e) => sum + e.amount, 0);
+  const activityMap = useMemo(() => {
+    const m: Record<string, typeof activities> = {};
+    for (const a of activities) {
+      if (!m[a.date]) m[a.date] = [];
+      m[a.date].push(a);
+    }
+    return m;
+  }, [activities]);
 
-        const activityTotal = activities
-            .filter(a => a.date === dateStr)
-            .reduce((sum, a) => sum + a.cost, 0);
+  const spendMap = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of expenses) {
+      const d = e.date.slice(0, 10);
+      m[d] = (m[d] || 0) + e.amount;
+    }
+    return m;
+  }, [expenses]);
 
-        return expenseTotal + activityTotal;
-    };
-
-    const dates = generateMonthlyGrid();
-
-    return (
-        <div className="space-y-12 py-6">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[#facc15]">
-                        <CalendarIcon className="w-4 h-4" />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Temporal Tracking</span>
-                    </div>
-                    <h1 className="text-4xl md:text-6xl font-semibold text-slate-900 tracking-tight">Mission Cycle</h1>
-                    <p className="text-slate-600 font-medium">Visualizing chronological logistics and operational window.</p>
-                </div>
-                <div className="flex items-center gap-4 bg-white border border-slate-200 p-2 rounded-2xl">
-                    <div className="flex bg-slate-50 rounded-xl p-1 border border-slate-200">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setView('weekly')}
-                            className={cn("h-9 px-4 rounded-lg text-[10px] font-bold uppercase tracking-widest", view === 'weekly' ? "bg-white text-slate-900" : "text-slate-500 hover:text-slate-700")}
-                        >
-                            Log View
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setView('monthly')}
-                            className={cn("h-9 px-4 rounded-lg text-[10px] font-bold uppercase tracking-widest", view === 'monthly' ? "bg-white text-slate-900" : "text-slate-500 hover:text-slate-700")}
-                        >
-                            Cycle View
-                        </Button>
-                    </div>
-                    <div className="h-4 w-px bg-slate-200" />
-                    <div className="flex gap-1 text-slate-900">
-                        <Button variant="ghost" size="icon" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))} className="h-9 w-9 hover:bg-slate-100">
-                            <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <div className="px-4 text-xs font-bold uppercase tracking-widest flex items-center">{monthNames[currentDate.getMonth()]}</div>
-                        <Button variant="ghost" size="icon" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))} className="h-9 w-9 hover:bg-slate-100">
-                            <ChevronRight className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
-            </header>
-
-            <AnimatePresence mode="wait">
-                {view === 'monthly' ? (
-                    <motion.div
-                        key="monthly"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="glass border-slate-200 overflow-hidden"
-                    >
-                        <div className="grid grid-cols-7 border-b border-slate-200">
-                            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(d => (
-                                <div key={d} className="py-4 text-[10px] font-bold text-slate-400 tracking-[0.2em] text-center border-r border-slate-200 last:border-r-0">{d}</div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-7">
-                            {dates.map((date, i) => {
-                                if (!date) return <div key={`empty-${i}`} className="min-h-[120px] bg-slate-50 border-r border-b border-slate-200" />;
-                                const dateStr = date.toISOString().split('T')[0];
-                                const dayActivities = activities.filter(a => a.date === dateStr);
-                                const totalSpent = getDailyTotal(dateStr);
-                                const isToday = dateStr === new Date().toISOString().split('T')[0];
-
-                                return (
-                                    <div key={dateStr} className={cn(
-                                        "min-h-[120px] border-r border-b border-slate-200 p-3 flex flex-col justify-between group transition-all relative overflow-hidden",
-                                        isToday && "bg-primary/5",
-                                        totalSpent > 0 && "bg-slate-50 hover:bg-slate-100"
-                                    )}>
-                                        <div className="flex justify-between items-start">
-                                            <span className={cn("text-xs font-bold", isToday ? "text-primary" : "text-slate-500")}>{date.getDate()}</span>
-                                            {totalSpent > 0 && (
-                                                <div className="flex items-center gap-1">
-                                                    <div className="w-1 h-1 rounded-full bg-primary shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-1 mt-2">
-                                            {dayActivities.slice(0, 2).map(a => (
-                                                <div key={a.id} className="truncate text-[8px] font-bold uppercase tracking-tighter px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                                                    {a.title}
-                                                </div>
-                                            ))}
-                                            {dayActivities.length > 2 && <div className="text-[8px] text-slate-400 font-bold ml-1">+{dayActivities.length - 2} MORE</div>}
-                                        </div>
-
-                                        {totalSpent > 0 && (
-                                            <div className="mt-auto pt-2 flex items-center gap-1.5 text-emerald-400">
-                                                <Wallet className="w-2.5 h-2.5" />
-                                                <span className="text-[10px] font-bold font-mono tracking-tighter text-emerald-400">-${totalSpent.toFixed(0)}</span>
-                                            </div>
-                                        )}
-
-                                        {isToday && <div className="absolute top-0 left-0 w-1 h-full bg-primary" />}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="weekly"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-4"
-                    >
-                        {Array.from({ length: 14 }).map((_, i) => {
-                            const d = new Date();
-                            d.setDate(d.getDate() + (i - 7)); // Show 7 days past, 7 days future
-                            const dateStr = d.toISOString().split('T')[0];
-                            const dayActivities = activities.filter(a => a.date === dateStr);
-                            const totalSpent = getDailyTotal(dateStr);
-                            const isToday = dateStr === new Date().toISOString().split('T')[0];
-
-                            return (
-                                <Card key={dateStr} className={cn("glass border-slate-200", isToday && "border-primary/20 bg-primary/5")}>
-                                    <div className="px-6 py-4 flex flex-row justify-between items-center">
-                                        <div className="flex items-center gap-6">
-                                            <div className="text-center w-12">
-                                                <div className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">{d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                                                <div className={cn("text-xl font-bold", isToday ? "text-primary" : "text-slate-900")}>{d.getDate()}</div>
-                                            </div>
-                                            <div className="h-8 w-px bg-slate-200" />
-                                            <div>
-                                                <div className="text-sm font-bold text-slate-900">{dayActivities.length} Operations Scheduled</div>
-                                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Temporal Intelligence</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-xs font-bold text-slate-500 mb-1 uppercase tracking-widest">Aggregate Spend</div>
-                                            <div className={cn("text-xl font-mono font-bold", totalSpent > 0 ? "text-emerald-500" : "text-slate-300")}>
-                                                ${totalSpent.toFixed(2)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            )
-                        })}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-header">Calendar</h1>
+          <p className="page-subtitle">Your activities and spending at a glance</p>
         </div>
-    );
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+            className="p-2 rounded-full hover:bg-[var(--color-bg-alt)] transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4 text-[var(--color-text-secondary)]" />
+          </button>
+          <span className="text-sm font-semibold text-[var(--color-text-primary)] px-3 min-w-[140px] text-center">
+            {format(current, "MMMM yyyy")}
+          </span>
+          <button
+            onClick={() => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+            className="p-2 rounded-full hover:bg-[var(--color-bg-alt)] transition-colors"
+          >
+            <ChevronRight className="w-4 h-4 text-[var(--color-text-secondary)]" />
+          </button>
+          <button
+            onClick={() => setCurrent(new Date())}
+            className="ml-2 px-3 py-1.5 rounded-full text-xs font-medium text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-colors"
+          >
+            Today
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar grid */}
+      <div className="card overflow-hidden">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 border-b border-[var(--color-border)]">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
+            <div key={d} className="py-3 text-center text-xs font-semibold text-[var(--color-text-secondary)] tracking-wide">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div className="grid grid-cols-7">
+          {grid.map((day, idx) => {
+            const key       = format(day, "yyyy-MM-dd");
+            const dayActs   = activityMap[key] || [];
+            const daySpend  = spendMap[key] || 0;
+            const inMonth   = isSameMonth(day, current);
+            const isToday   = isSameDay(day, today);
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+            return (
+              <div
+                key={idx}
+                className={cn(
+                  "min-h-[90px] md:min-h-[110px] border-b border-r border-[var(--color-border-light)] p-1.5 flex flex-col",
+                  !inMonth && "bg-[var(--color-bg-alt)]",
+                  isWeekend && inMonth && "bg-blue-50/30",
+                  isToday && "bg-[var(--color-primary-light)]"
+                )}
+              >
+                {/* Date number */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className={cn(
+                    "text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full",
+                    isToday
+                      ? "bg-[var(--color-primary)] text-white"
+                      : inMonth
+                        ? "text-[var(--color-text-primary)]"
+                        : "text-[var(--color-text-muted)]"
+                  )}>
+                    {format(day, "d")}
+                  </span>
+                  {daySpend > 0 && (
+                    <span className="text-[9px] font-semibold text-[var(--color-error)] flex items-center gap-0.5">
+                      <DollarSign className="w-2.5 h-2.5" />{daySpend.toFixed(0)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Activity chips */}
+                <div className="flex flex-col gap-0.5 overflow-hidden">
+                  {dayActs.slice(0, 2).map(act => (
+                    <div
+                      key={act.id}
+                      className="truncate text-[10px] font-medium px-1.5 py-0.5 rounded text-white"
+                      style={{ background: CAT_COLORS[act.category] || "#9aa0a6" }}
+                      title={act.title}
+                    >
+                      {act.title}
+                    </div>
+                  ))}
+                  {dayActs.length > 2 && (
+                    <span className="text-[9px] text-[var(--color-text-muted)] font-medium pl-1">
+                      +{dayActs.length - 2} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="card p-4 flex flex-wrap gap-3">
+        {Object.entries(CAT_COLORS).map(([cat, color]) => (
+          <div key={cat} className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
+            <span className="text-xs text-[var(--color-text-secondary)]">{cat}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5 ml-auto">
+          <DollarSign className="w-3 h-3 text-[var(--color-error)]" />
+          <span className="text-xs text-[var(--color-text-secondary)]">Daily spend</span>
+        </div>
+      </div>
+
+      {/* This month summary */}
+      {(activities.length > 0 || Object.keys(spendMap).length > 0) && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Activities this month", value: activities.filter(a => {
+              const d = parseISO(a.date);
+              return isSameMonth(d, current);
+            }).length, icon: CalendarDays, color: "#1a73e8" },
+            { label: "Spent this month", value: `$${Object.entries(spendMap).filter(([k]) => {
+              return isSameMonth(parseISO(k), current);
+            }).reduce((s, [, v]) => s + v, 0).toFixed(0)}`, icon: DollarSign, color: "#ea4335" },
+            { label: "Completed", value: activities.filter(a => a.completed && isSameMonth(parseISO(a.date), current)).length, icon: CalendarDays, color: "#34a853" },
+            { label: "Pending", value: activities.filter(a => !a.completed && isSameMonth(parseISO(a.date), current)).length, icon: CalendarDays, color: "#fbbc04" },
+          ].map(stat => (
+            <div key={stat.label} className="card p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: stat.color + "18" }}>
+                  <stat.icon className="w-3.5 h-3.5" style={{ color: stat.color }} />
+                </div>
+                <span className="text-xs text-[var(--color-text-secondary)]">{stat.label}</span>
+              </div>
+              <p className="text-xl font-semibold text-[var(--color-text-primary)]">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

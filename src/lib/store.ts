@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { AppState, UserData, UserProfile, Activity, Expense, JournalEntry } from './types';
+import { AppState, UserData, UserProfile, Activity, Expense, JournalEntry, AvailabilityWindow } from './types';
 
 export const useAppStore = create<AppState>()(
     persist(
@@ -19,6 +19,7 @@ export const useAppStore = create<AppState>()(
             userProfile: null,
             history: [],
             initializedEventIds: [],
+            availabilityWindows: [],
 
             // Authentication Actions
             signup: (profile: UserProfile) => {
@@ -32,7 +33,8 @@ export const useAppStore = create<AppState>()(
                     weeklySavingsGoal: 0,
                     userProfile: profile,
                     history: [],
-                    initializedEventIds: []
+                    initializedEventIds: [],
+                    availabilityWindows: [],
                 };
 
                 set((state) => ({
@@ -55,7 +57,8 @@ export const useAppStore = create<AppState>()(
                         weeklySavingsGoal: user.weeklySavingsGoal || 0,
                         userProfile: user.userProfile,
                         history: user.history || [],
-                        initializedEventIds: user.initializedEventIds || []
+                        initializedEventIds: user.initializedEventIds || [],
+                        availabilityWindows: user.availabilityWindows || [],
                     });
                     return true;
                 }
@@ -71,7 +74,8 @@ export const useAppStore = create<AppState>()(
                     weeklySavingsGoal: 0,
                     userProfile: null,
                     history: [],
-                    initializedEventIds: []
+                    initializedEventIds: [],
+                    availabilityWindows: [],
                 });
             },
 
@@ -101,7 +105,8 @@ export const useAppStore = create<AppState>()(
                         weeklySavingsGoal: 0,
                         userProfile: newProfile,
                         history: [],
-                        initializedEventIds: []
+                        initializedEventIds: [],
+                        availabilityWindows: [],
                     };
 
                     set((state) => ({
@@ -120,7 +125,8 @@ export const useAppStore = create<AppState>()(
                     weeklySavingsGoal: existing.weeklySavingsGoal || 0,
                     userProfile: existing.userProfile,
                     history: existing.history || [],
-                    initializedEventIds: existing.initializedEventIds || []
+                    initializedEventIds: existing.initializedEventIds || [],
+                    availabilityWindows: existing.availabilityWindows || [],
                 });
             },
 
@@ -301,7 +307,8 @@ export const useAppStore = create<AppState>()(
                     weeklySavingsGoal: 0,
                     userProfile: null,
                     history: [],
-                    initializedEventIds: []
+                    initializedEventIds: [],
+                    availabilityWindows: [],
                 })),
 
             initializeEvent: (event) => {
@@ -400,17 +407,12 @@ export const useAppStore = create<AppState>()(
                 if (!email) return;
 
                 set((state) => {
-                    // 1. Sync initializedEventIds with current activities
                     const activeOriginalIds = state.activities.map(a => a.originalEventId).filter(Boolean) as string[];
                     const nextIds = state.initializedEventIds.filter(id => activeOriginalIds.includes(id));
-
-                    // 2. Sync Expenses (Cleanup orphaned mission expenses)
-                    // Only cleanup expenses that look like missions but have no activity counterpart
                     const activeMissionTitles = state.activities.map(a => a.title);
                     const nextExpenses = state.expenses.filter(exp => {
                         if (exp.description?.startsWith('Mission: ')) {
                             const missionTitle = exp.description.replace('Mission: ', '');
-                            // If the expense description title isn't in active activities, it's orphaned
                             return activeMissionTitles.includes(missionTitle);
                         }
                         return true;
@@ -426,6 +428,48 @@ export const useAppStore = create<AppState>()(
                                 initializedEventIds: nextIds,
                                 expenses: nextExpenses
                             }
+                        }
+                    };
+                });
+            },
+
+            setAvailabilityWindows: (windows: AvailabilityWindow[]) => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+                set((state) => ({
+                    availabilityWindows: windows,
+                    accounts: {
+                        ...state.accounts,
+                        [email]: { ...state.accounts[email], availabilityWindows: windows }
+                    }
+                }));
+            },
+
+            addAvailabilityWindow: (window: AvailabilityWindow) => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+                set((state) => {
+                    const next = [...state.availabilityWindows, window];
+                    return {
+                        availabilityWindows: next,
+                        accounts: {
+                            ...state.accounts,
+                            [email]: { ...state.accounts[email], availabilityWindows: next }
+                        }
+                    };
+                });
+            },
+
+            removeAvailabilityWindow: (id: string) => {
+                const email = get().currentUserEmail;
+                if (!email) return;
+                set((state) => {
+                    const next = state.availabilityWindows.filter(w => w.id !== id);
+                    return {
+                        availabilityWindows: next,
+                        accounts: {
+                            ...state.accounts,
+                            [email]: { ...state.accounts[email], availabilityWindows: next }
                         }
                     };
                 });
