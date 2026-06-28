@@ -73,6 +73,29 @@
   --radius: var(--radius-md);
 }
 
+/* ─── Dark Mode ──────────────────────────────────────────────────────────────*/
+
+[data-theme="dark"] {
+  --color-surface:        #1e1e2e;
+  --color-bg:             #13131f;
+  --color-bg-alt:         #2a2a3d;
+  --color-border:         #3a3a50;
+  --color-border-light:   #2a2a3d;
+  --color-text-primary:   #e8eaed;
+  --color-text-secondary: #9aa0a6;
+  --color-text-muted:     #5f6368;
+  --color-primary-light:  #1a3358;
+  --color-primary:        #4a8ef8;
+  --background:           #13131f;
+  --foreground:           #e8eaed;
+  --card:                 #1e1e2e;
+  --card-foreground:      #e8eaed;
+  --muted:                #2a2a3d;
+  --muted-foreground:     #9aa0a6;
+  --border:               #3a3a50;
+  --input:                #2a2a3d;
+}
+
 /* ─── Base ───────────────────────────────────────────────────────────────────*/
 
 *, *::before, *::after { box-sizing: border-box; }

@@ -15,7 +15,20 @@ const roboto = Roboto({
 
 export const metadata: Metadata = {
   title: "Escapade · Your Weekend Companion",
-  description: "Discover events near you, plan your week, and stay on budget.",
+  description: "Discover local events, plan your weekend, and stay on budget — powered by AI.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Escapade",
+  },
+  keywords: ["events", "weekend", "planning", "budget", "local events", "things to do"],
+  openGraph: {
+    title: "Escapade · Your Weekend Companion",
+    description: "Discover local events, plan your weekend, and stay on budget — powered by AI.",
+    type: "website",
+    siteName: "Escapade",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

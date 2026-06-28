@@ -1,0 +1,42 @@
+{
+  "name": "Escapade — Weekend Event Companion",
+  "short_name": "Escapade",
+  "description": "Discover local events, plan your weekend, and stay on budget.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#1a73e8",
+  "orientation": "portrait-primary",
+  "categories": ["lifestyle", "entertainment", "social"],
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple touch icon"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Discover Events",
+      "url": "/discover",
+      "description": "Find events near you"
+    },
+    {
+      "name": "My Week",
+      "url": "/planner",
+      "description": "View your planned activities"
+    },
+    {
+      "name": "AI Planner",
+      "url": "/ai",
+      "description": "Get AI weekend suggestions"
+    }
+  ]
+}

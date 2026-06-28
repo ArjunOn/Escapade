@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppStore } from "@/store";
 import { cn } from "@/lib/utils";
 import {
   Plus, Trash2, CheckCircle2, Circle, Clock, MapPin,
-  ChevronLeft, ChevronRight, DollarSign, Calendar
+  ChevronLeft, ChevronRight, DollarSign, Calendar, CloudRain
 } from "lucide-react";
+import { getWeatherForecast, isRainy, isOutdoorEvent, type WeatherDay } from "@/services/weather-service";
 import {
   format, startOfWeek, addDays, isSameDay, parseISO, addWeeks, subWeeks
 } from "date-fns";
@@ -24,11 +25,18 @@ function getCatColor(cat?: string) { return CATEGORY_COLORS[cat || "Other"] || "
 import { useToast } from "@/components/ui/Toast";
 
 export default function PlannerPage() {
-  const { activities, addActivity, removeActivity, toggleActivity, weeklySavingsGoal, expenses, completeMission } = useAppStore();
+  const { activities, addActivity, removeActivity, toggleActivity, weeklySavingsGoal, expenses, completeMission, userProfile } = useAppStore();
   const { toast } = useToast();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", date: format(new Date(), "yyyy-MM-dd"), startTime: "09:00", cost: 0, category: "Events" as Category, location: "" });
+  const [weather, setWeather] = useState<WeatherDay[]>([]);
+
+  useEffect(() => {
+    const lat = userProfile?.lat ?? 42.3314;
+    const lng = userProfile?.lng ?? -83.0458;
+    getWeatherForecast(lat, lng, 7).then(setWeather).catch(() => {});
+  }, [userProfile?.lat, userProfile?.lng]);
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
@@ -102,6 +110,42 @@ export default function PlannerPage() {
         </div>
       </div>
 
+      {/* Weather Strip */}
+      {weather.length > 0 && (
+        <div className="card p-3">
+          <p className="text-xs font-medium text-[var(--color-text-secondary)] mb-2">7-Day Forecast</p>
+          <div className="grid grid-cols-7 gap-1">
+            {weather.slice(0, 7).map((day, i) => {
+              const date = new Date(day.date + "T00:00:00");
+              const hasOutdoor = activitiesInWeek.some(a =>
+                isSameDay(parseISO(a.date), date) && isOutdoorEvent(a.category)
+              );
+              const rainy = isRainy(day);
+              return (
+                <div key={day.date} className={cn(
+                  "flex flex-col items-center gap-0.5 p-1.5 rounded-lg text-center",
+                  rainy && hasOutdoor ? "bg-amber-50 border border-amber-200" : "bg-[var(--color-bg-alt)]"
+                )}>
+                  <span className="text-[10px] font-medium text-[var(--color-text-secondary)]">
+                    {i === 0 ? "Today" : format(date, "EEE")}
+                  </span>
+                  <span className="text-base">{day.icon}</span>
+                  <span className="text-[10px] text-[var(--color-text-primary)] font-medium">
+                    {day.temperatureMax}°
+                  </span>
+                  {rainy && (
+                    <span className="text-[9px] text-blue-500 font-medium">{day.precipitationProbability}%</span>
+                  )}
+                  {rainy && hasOutdoor && (
+                    <CloudRain className="w-3 h-3 text-amber-500" title="Rain warning for outdoor activity" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Completion bar */}
       {activitiesInWeek.length > 0 && (() => {
         const done = activitiesInWeek.filter(a => a.completed).length;
@@ -165,13 +209,22 @@ export default function PlannerPage() {
                         <div className="text-[9px] opacity-80">${act.cost}</div>
                         {/* Hover actions */}
                         <div className="absolute top-0.5 right-0.5 hidden group-hover:flex gap-0.5">
-                          <button onClick={() => toggleActivity(act.id)} className="p-0.5 bg-white/20 rounded hover:bg-white/40">
-                            {act.completed ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+                          <button
+                            onClick={() => { toggleActivity(act.id); if (!act.completed) toast(`Checked in: ${act.title} ✓`, "success"); }}
+                            className="p-0.5 bg-white/20 rounded hover:bg-white/40"
+                            title={act.completed ? "Undo check-in" : "Check in"}
+                          >
+                            {act.completed ? <CheckCircle2 className="w-3 h-3 text-green-300" /> : <Circle className="w-3 h-3" />}
                           </button>
                           <button onClick={() => { removeActivity(act.id); toast("Activity removed", "info"); }} className="p-0.5 bg-white/20 rounded hover:bg-red-400">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
+                        {act.completed && act.checkedInAt && (
+                          <div className="text-[8px] opacity-70 mt-0.5">
+                            ✓ {format(new Date(act.checkedInAt), "h:mm a")}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

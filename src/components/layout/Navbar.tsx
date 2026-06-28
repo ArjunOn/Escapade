@@ -8,17 +8,18 @@ import { useAppStore } from "@/store";
 import {
   LayoutDashboard, Compass, CalendarDays, Wallet,
   Sparkles, BarChart2, BookOpen, Settings,
-  Menu, X, MapPin, Bell, ChevronDown, DollarSign, Calendar, Star
+  Menu, X, MapPin, Bell, ChevronDown, DollarSign, Star, Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProfileModal } from "@/components/features/profile/ProfileModal";
+import { DarkModeToggle } from "@/components/ui/DarkModeToggle";
 
 const NAV_ITEMS = [
   { href: "/",          icon: LayoutDashboard, label: "Dashboard" },
   { href: "/discover",  icon: Compass,         label: "Discover"  },
   { href: "/saved",     icon: Star,            label: "Saved"     },
   { href: "/planner",   icon: CalendarDays,    label: "My Week"   },
-  { href: "/calendar",  icon: Calendar,        label: "Calendar"  },
+  { href: "/goals",     icon: Target,          label: "Goals"     },
   { href: "/budget",    icon: Wallet,          label: "Budget"    },
   { href: "/ai",        icon: Sparkles,        label: "AI Planner"},
   { href: "/insights",  icon: BarChart2,       label: "Insights"  },
@@ -74,6 +75,9 @@ export function Navbar() {
           </div>
         )}
 
+        {/* Dark mode toggle */}
+        <DarkModeToggle />
+
         {/* Notifications */}
         <button className="relative p-2 rounded-full hover:bg-[var(--color-bg-alt)] transition-colors mr-1">
           <Bell className="w-5 h-5 text-[var(--color-text-secondary)]" />
@@ -93,7 +97,7 @@ export function Navbar() {
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-[var(--color-border)] z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-2 w-52 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)] z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-[var(--color-border-light)]">
                   <p className="text-sm font-semibold text-[var(--color-text-primary)]">
                     {userProfile?.name || "User"}

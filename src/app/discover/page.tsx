@@ -138,8 +138,8 @@ export default function DiscoverPage() {
   const budgetRemaining = Math.max((weeklySavingsGoal || 0) - expenses.reduce((s,e) => s + e.amount, 0), 0);
 
   // Use location from profile, fall back to Detroit
-  const lat = 42.3314;
-  const lng = -83.0458;
+  const lat = userProfile?.lat ?? 42.3314;
+  const lng = userProfile?.lng ?? -83.0458;
   const cityLabel = userProfile?.location || "Detroit area";
 
   const fetchEvents = useCallback(async () => {

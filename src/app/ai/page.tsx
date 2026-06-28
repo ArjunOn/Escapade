@@ -40,7 +40,9 @@ export default function AIPage() {
 
     try {
       // Fetch nearby events for context
-      const evRes = await fetch("/api/events?lat=42.3314&lng=-83.0458&days=14&limit=20");
+      const userLat = userProfile?.lat ?? 42.3314;
+      const userLng = userProfile?.lng ?? -83.0458;
+      const evRes = await fetch(`/api/events?lat=${userLat}&lng=${userLng}&days=14&limit=20`);
       const evData = evRes.ok ? await evRes.json() : { events: [] };
 
       const res = await fetch("/api/ai/plan-weekend", {

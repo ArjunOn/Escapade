@@ -195,9 +195,15 @@ export const useAppStore = create<AppState>()(
                 if (!email) return;
 
                 set((state) => {
-                    const nextActivities = state.activities.map((a) =>
-                        a.id === id ? { ...a, completed: !a.completed } : a
-                    );
+                    const nextActivities = state.activities.map((a) => {
+                        if (a.id !== id) return a;
+                        const completing = !a.completed;
+                        return {
+                            ...a,
+                            completed: completing,
+                            checkedInAt: completing ? new Date().toISOString() : undefined,
+                        };
+                    });
                     return {
                         activities: nextActivities,
                         accounts: {

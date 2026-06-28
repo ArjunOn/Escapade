@@ -25,7 +25,7 @@ function getCatColor(cat?: string | null) {
 }
 
 export default function SavedPage() {
-  const { savedEventIds, toggleSavedEvent } = useAppStore();
+  const { savedEventIds, toggleSavedEvent, userProfile } = useAppStore();
   const { toast } = useToast();
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +35,10 @@ export default function SavedPage() {
     async function load() {
       if (savedEventIds.length === 0) { setLoading(false); return; }
       try {
+        const lat = userProfile?.lat ?? 42.3314;
+        const lng = userProfile?.lng ?? -83.0458;
         // Fetch a broad set and filter client-side by saved IDs
-        const res = await fetch("/api/events?lat=42.3314&lng=-83.0458&days=30&limit=100");
+        const res = await fetch(`/api/events?lat=${lat}&lng=${lng}&days=30&limit=100`);
         if (res.ok) {
           const data = await res.json();
           const saved = (data.events || []).filter((e: any) => savedEventIds.includes(e.id));

@@ -63,10 +63,26 @@ export default function OnboardingPage() {
   const toggleInterest = (t: string) =>
     setInterests(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
 
-  const finish = () => {
+  const finish = async () => {
+    // Geocode the city using Nominatim (free, no API key)
+    let lat: number | undefined;
+    let lng: number | undefined;
+    try {
+      const geo = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`,
+        { headers: { "User-Agent": "Escapade/1.0" } }
+      );
+      if (geo.ok) {
+        const results = await geo.json();
+        if (results.length > 0) {
+          lat = parseFloat(results[0].lat);
+          lng = parseFloat(results[0].lon);
+        }
+      }
+    } catch (_) {}
     updateUserProfile({
       vibes, budgetTier: budget, preferences: interests,
-      location, onboardingCompleted: true,
+      location, lat, lng, onboardingCompleted: true,
     });
     router.replace("/");
   };

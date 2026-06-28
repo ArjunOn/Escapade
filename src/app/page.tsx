@@ -15,6 +15,9 @@ import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 import { format, isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 
+const DEFAULT_LAT = 42.3314;
+const DEFAULT_LNG = -83.0458;
+
 // ─── Category color map (GCal-style) ──────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
   "Music":          "#e91e63",
@@ -190,7 +193,9 @@ export default function Dashboard() {
   const fetchNearby = useCallback(async () => {
     setEventsLoading(true);
     try {
-      const res = await fetch(`/api/events?lat=42.3314&lng=-83.0458&days=14&limit=6`);
+      const userLat = userProfile?.lat ?? DEFAULT_LAT;
+      const userLng = userProfile?.lng ?? DEFAULT_LNG;
+      const res = await fetch(`/api/events?lat=${userLat}&lng=${userLng}&days=14&limit=6`);
       if (res.ok) {
         const data = await res.json();
         setNearbyEvents(data.events || []);
@@ -209,8 +214,8 @@ export default function Dashboard() {
         userPreferences: userProfile.preferences || [],
         userVibes: userProfile.vibes || [],
         weeklyBudgetRemaining: Math.max((weeklySavingsGoal || 0) - totalSpentNow, 0),
-        userLat: 42.3314,
-        userLng: -83.0458,
+        userLat: userProfile?.lat ?? DEFAULT_LAT,
+        userLng: userProfile?.lng ?? DEFAULT_LNG,
         availabilityWindows: availabilityWindows || [],
       }, 4);
       setScoredEvents(results);
@@ -429,32 +434,97 @@ function LandingPage({ onLogin, isLoginOpen, onLoginClose }: {
     { icon: Compass, color: "#1a73e8", title: "Discover Real Events", desc: "Live events from Eventbrite & Ticketmaster near you — music, food, sports, arts, and more." },
     { icon: DollarSign, color: "#34a853", title: "Budget-Aware Planning", desc: "Set a weekly budget and see which events you can actually afford right now." },
     { icon: Sparkles, color: "#e91e63", title: "AI Weekend Planner", desc: "Tell AI your free time and budget. Get a full weekend schedule using real local events." },
+    { icon: Star,      color: "#f57c00", title: "Goals & Check-Ins",   desc: "Set short and long-term goals, check in to events, and watch your progress build." },
   ];
+
   return (
-    <div className="max-w-3xl mx-auto text-center space-y-12 py-8">
-      <div className="space-y-4">
+    <div className="max-w-4xl mx-auto space-y-16 py-8">
+      {/* Hero */}
+      <div className="text-center space-y-5">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-semibold">
-          <Zap className="w-3.5 h-3.5" /> Real events · Smart planning · Your budget
+          <Zap className="w-3.5 h-3.5" /> Free · No credit card · Works in any city
         </div>
-        <h1 className="text-4xl font-medium text-[var(--color-text-primary)] leading-tight">
-          Your personal weekend<br />event companion
+        <h1 className="text-4xl md:text-5xl font-semibold text-[var(--color-text-primary)] leading-tight tracking-tight">
+          Stop scrolling.<br />
+          <span style={{ color: "#1a73e8" }}>Start exploring.</span>
         </h1>
-        <p className="text-base text-[var(--color-text-secondary)] max-w-xl mx-auto">
-          Discover what's happening near you, plan your time, and stick to your budget — all in one friendly app.
+        <p className="text-base md:text-lg text-[var(--color-text-secondary)] max-w-xl mx-auto leading-relaxed">
+          Escapade finds real events near you, helps you plan your weekend, and keeps you on budget — all in one place.
         </p>
-        <div className="flex gap-3 justify-center pt-2">
-          <Link href="/signup" className="btn-primary rounded-full px-6 py-2.5 text-sm font-medium">
-            Get started free
+        <div className="flex gap-3 justify-center pt-2 flex-wrap">
+          <Link href="/signup" className="btn-primary rounded-full px-7 py-3 text-sm font-semibold shadow-md hover:shadow-lg transition-shadow">
+            Get started — it&apos;s free
           </Link>
-          <button onClick={onLogin} className="btn-ghost rounded-full px-6 py-2.5 text-sm font-medium border border-[var(--color-border)]">
+          <button onClick={onLogin} className="rounded-full px-7 py-3 text-sm font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-alt)] transition-colors">
             Sign in
           </button>
         </div>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Joined by weekend planners in 10+ cities · Powered by Eventbrite &amp; Ticketmaster
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+      {/* App preview mockup */}
+      <div className="relative mx-auto max-w-2xl">
+        <div className="card overflow-hidden shadow-xl border-[var(--color-border)]">
+          {/* Fake topbar */}
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
+            <div className="w-6 h-6 rounded-md bg-[var(--color-primary)] flex items-center justify-center">
+              <Compass className="w-3 h-3 text-white" />
+            </div>
+            <span className="text-xs font-semibold text-[var(--color-text-primary)]">Escapade</span>
+            <div className="flex-1" />
+            <div className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-bg-alt)] text-[var(--color-text-muted)]">Detroit, MI</div>
+          </div>
+          {/* Fake dashboard content */}
+          <div className="p-4 bg-[var(--color-bg)] space-y-3">
+            <p className="text-xs font-medium text-[var(--color-text-secondary)]">Good evening, Alex 🌙</p>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Budget left", value: "$47", color: "#1a73e8" },
+                { label: "Planned", value: "3 events", color: "#e91e63" },
+                { label: "Spent", value: "$53", color: "#f57c00" },
+                { label: "Nearby", value: "12 events", color: "#34a853" },
+              ].map(s => (
+                <div key={s.label} className="card p-2 text-center">
+                  <p className="text-sm font-semibold" style={{ color: s.color }}>{s.value}</p>
+                  <p className="text-[9px] text-[var(--color-text-muted)]">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              {[
+                { title: "Detroit Jazz Fest", cat: "Music", cost: "Free", color: "#e91e63", time: "Sat · 6:00 PM" },
+                { title: "Eastern Market Tour", cat: "Food & Drink", cost: "$12", color: "#e64a19", time: "Sun · 10:00 AM" },
+                { title: "Belle Isle 5K", cat: "Sports", cost: "$25", color: "#f57c00", time: "Sun · 8:00 AM" },
+              ].map(ev => (
+                <div key={ev.title} className="event-card card p-2.5 flex items-center gap-2.5"
+                  style={{ "--event-color": ev.color } as React.CSSProperties}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: ev.color + "18" }}>
+                    <Star className="w-3.5 h-3.5" style={{ color: ev.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[var(--color-text-primary)] truncate">{ev.title}</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">{ev.time}</p>
+                  </div>
+                  <span className="text-[10px] font-semibold" style={{ color: ev.cost === "Free" ? "#34a853" : ev.color }}>
+                    {ev.cost}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Glow effect */}
+        <div className="absolute -inset-4 -z-10 rounded-3xl opacity-20 blur-2xl"
+          style={{ background: "linear-gradient(135deg, #1a73e8, #e91e63)" }} />
+      </div>
+
+      {/* Features grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
         {features.map(f => (
-          <div key={f.title} className="card p-5 space-y-3">
+          <div key={f.title} className="card p-5 space-y-3 hover:shadow-md transition-shadow">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: f.color + "18" }}>
               <f.icon className="w-5 h-5" style={{ color: f.color }} />
             </div>
@@ -462,6 +532,16 @@ function LandingPage({ onLogin, isLoginOpen, onLoginClose }: {
             <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{f.desc}</p>
           </div>
         ))}
+      </div>
+
+      {/* Bottom CTA */}
+      <div className="text-center space-y-4 py-4">
+        <h2 className="text-2xl font-semibold text-[var(--color-text-primary)]">Ready to own your weekends?</h2>
+        <Link href="/signup"
+          className="inline-flex items-center gap-2 btn-primary rounded-full px-8 py-3 text-sm font-semibold shadow-md">
+          Start planning for free <ArrowRight className="w-4 h-4" />
+        </Link>
+        <p className="text-xs text-[var(--color-text-muted)]">No credit card required</p>
       </div>
 
       <LoginModal isOpen={isLoginOpen} onClose={onLoginClose} />

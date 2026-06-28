@@ -16,8 +16,24 @@ export interface UserProfile {
   vibes: string[];
   budgetTier: 'frugal' | 'moderate' | 'luxury';
   location: string;
+  lat?: number;
+  lng?: number;
   bio?: string; // Optional user bio
   onboardingCompleted: boolean;
+}
+
+export interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  type: 'short_term' | 'long_term';
+  category: 'events' | 'budget' | 'exploration' | 'social' | 'wellness';
+  targetValue: number;
+  currentValue: number;
+  unit: string;
+  deadline?: string; // ISO date string
+  status: 'active' | 'completed' | 'abandoned';
+  createdAt: string;
 }
 
 export interface Activity {
@@ -29,6 +45,7 @@ export interface Activity {
   date: string; // ISO Date String (YYYY-MM-DD)
   cost: number;
   completed: boolean;
+  checkedInAt?: string; // ISO datetime when user checked in
   location?: string;
   matched?: boolean; // New: Matched for You badge
   originalEventId?: string; // ID of the source discovery event

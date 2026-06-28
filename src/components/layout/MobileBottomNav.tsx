@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Compass, CalendarDays, Wallet, Sparkles } from "lucide-react";
+import { LayoutDashboard, Compass, Target, Wallet, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BOTTOM_NAV = [
   { href: "/",         icon: LayoutDashboard, label: "Home"     },
   { href: "/discover", icon: Compass,         label: "Discover" },
-  { href: "/planner",  icon: CalendarDays,    label: "Planner"  },
+  { href: "/goals",    icon: Target,          label: "Goals"    },
   { href: "/budget",   icon: Wallet,          label: "Budget"   },
   { href: "/ai",       icon: Sparkles,        label: "AI"       },
 ];
@@ -17,7 +17,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-[var(--color-border)] safe-area-pb">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-[var(--color-surface)] border-t border-[var(--color-border)] safe-area-pb">
       <div className="flex items-center justify-around px-2 py-1">
         {BOTTOM_NAV.map(item => {
           const isActive = pathname === item.href ||
