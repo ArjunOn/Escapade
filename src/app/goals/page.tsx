@@ -131,7 +131,7 @@ function AddGoalModal({ onClose, onAdd }: {
 }) {
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"short_term" | "long_term">("short_term");
-  const [category, setCategory] = useState("events");
+  const [category, setCategory] = useState<Goal['category']>("events");
   const [targetValue, setTargetValue] = useState(4);
   const [unit, setUnit] = useState("events");
   const [deadline, setDeadline] = useState("");
