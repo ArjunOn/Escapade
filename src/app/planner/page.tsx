@@ -137,7 +137,7 @@ export default function PlannerPage() {
                     <span className="text-[9px] text-blue-500 font-medium">{day.precipitationProbability}%</span>
                   )}
                   {rainy && hasOutdoor && (
-                    <CloudRain className="w-3 h-3 text-amber-500" title="Rain warning for outdoor activity" />
+                    <CloudRain className="w-3 h-3 text-amber-500" aria-label="Rain warning for outdoor activity" />
                   )}
                 </div>
               );

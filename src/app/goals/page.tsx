@@ -191,7 +191,7 @@ function AddGoalModal({ onClose, onAdd }: {
             {CATEGORIES.map(cat => {
               const CatIcon = cat.icon;
               return (
-                <button key={cat.value} onClick={() => setCategory(cat.value)}
+                <button key={cat.value} onClick={() => setCategory(cat.value as Goal['category'])}
                   className={cn("flex flex-col items-center gap-1 p-2 rounded-xl border text-xs transition-colors",
                     category === cat.value
                       ? "border-transparent text-white"
