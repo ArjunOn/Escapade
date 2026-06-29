@@ -1,6 +1,14 @@
 import { createClient } from '@/lib/supabase/client'
 import { SignUpData, SignInData, AuthUser } from '@/lib/types/auth'
 
+// Custom error class so callers can branch on error type
+export class AuthError extends Error {
+  constructor(message: string, public readonly code: string) {
+    super(message)
+    this.name = 'AuthError'
+  }
+}
+
 export class AuthService {
   private supabase = createClient()
 
@@ -13,34 +21,68 @@ export class AuthService {
 
     if (error) {
       const msg = error.message?.toLowerCase() || ''
+
+      // Rate-limit: account may have been created — try signing in
       if (msg.includes('email rate limit') || msg.includes('rate limit')) {
         if (data?.user) return data.user as AuthUser
         try {
           const r = await this.supabase.auth.signInWithPassword({ email, password })
           if (r.data?.user) return r.data.user as AuthUser
         } catch { /* swallow */ }
-        throw new Error('Account created — please try signing in.')
+        throw new AuthError(
+          'Account created — please sign in.',
+          'rate_limit',
+        )
       }
-      if (msg.includes('already registered') || msg.includes('already exists')) {
-        throw new Error('An account with this email already exists. Please sign in instead.')
+
+      // Email already registered
+      if (
+        msg.includes('already registered') ||
+        msg.includes('already exists') ||
+        msg.includes('user already registered')
+      ) {
+        throw new AuthError(
+          'An account with this email already exists. Please sign in instead.',
+          'email_exists',
+        )
       }
-      throw error
+
+      throw new AuthError(error.message || 'Sign up failed — please try again.', 'signup_error')
     }
 
-    if (!data.user) throw new Error('Sign up failed — please try again.')
+    if (!data.user) throw new AuthError('Sign up failed — please try again.', 'signup_error')
     return data.user as AuthUser
   }
 
   async signIn({ email, password }: SignInData) {
     const { data, error } = await this.supabase.auth.signInWithPassword({ email, password })
+
     if (error) {
       const msg = error.message?.toLowerCase() || ''
-      if (msg.includes('invalid') || msg.includes('credentials')) {
-        throw new Error('Incorrect email or password.')
+
+      // Supabase returns the same message for "user doesn't exist" and "wrong password"
+      // for security. We surface a helpful message with a signup CTA in the UI.
+      if (
+        msg.includes('invalid login credentials') ||
+        msg.includes('invalid credentials') ||
+        msg.includes('email not confirmed') ||
+        msg.includes('invalid') ||
+        msg.includes('credentials')
+      ) {
+        throw new AuthError(
+          'No account found with this email and password.',
+          'invalid_credentials',
+        )
       }
-      throw error
+
+      if (msg.includes('too many requests') || msg.includes('rate limit')) {
+        throw new AuthError('Too many attempts — please wait a moment and try again.', 'rate_limit')
+      }
+
+      throw new AuthError(error.message || 'Sign in failed — please try again.', 'signin_error')
     }
-    if (!data.user) throw new Error('Sign in failed — please try again.')
+
+    if (!data.user) throw new AuthError('Sign in failed — please try again.', 'signin_error')
     return data.user as AuthUser
   }
 
